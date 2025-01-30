@@ -104,14 +104,12 @@ class ShopifyService {
   }
 
   private createShopifyClient(token: string, shopUrl: string) {
-    const baseURL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || 'http://localhost:3001';
     logger.debug('ShopifyService', 'Creating Shopify client', {
-      fileName: this.fileName,
-      baseURL
+      fileName: this.fileName
     });
     
     return axios.create({
-      baseURL: `${baseURL}/api/shopify`,
+      baseURL: '/api/shopify',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',

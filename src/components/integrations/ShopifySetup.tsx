@@ -42,8 +42,7 @@ export function ShopifySetup({ onClose }: { onClose: () => void }) {
 
       // Test the connection
       console.log('Testing API connection...');
-      const baseURL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || 'http://localhost:3001';
-      const response = await fetch(`${baseURL}/api/shopify/products`, {
+      const response = await fetch('/api/shopify/products', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${apiToken}`,

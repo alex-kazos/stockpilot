@@ -33,8 +33,7 @@ export function ShopifyConnect({ onClose }: ShopifyConnectProps) {
       });
 
       // Test connection with backend
-      const baseURL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || 'http://localhost:3001';
-      const response = await fetch(`${baseURL}/api/products`, {
+      const response = await fetch('/api/products', {
         method: 'GET',
         headers: {
           'X-User-ID': user.uid,
