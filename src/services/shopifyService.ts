@@ -104,8 +104,9 @@ class ShopifyService {
   }
 
   private createShopifyClient(token: string, shopUrl: string) {
+    const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
     return axios.create({
-      baseURL: '/shopify-proxy',
+      baseURL: `${baseURL}/api/shopify`,
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
