@@ -52,6 +52,9 @@ export const DashboardPage: React.FC = () => {
     fetchOrders: true    // Always fetch orders
   });
 
+  console.log('DashboardPage: Products received', products?.length);
+  console.log('DashboardPage: Orders received', orders?.length);
+
   // Check subscription status
   useEffect(() => {
     const checkSubscription = async () => {
@@ -204,7 +207,7 @@ export const DashboardPage: React.FC = () => {
         isRefreshing={isRefreshing || dataLoading}
       />
       
-      <MetricCards products={dashboardProducts} orders={orders || []} />
+      <MetricCards products={products || []} orders={orders || []} />
       
       <DashboardGrid 
         products={dashboardProducts} 

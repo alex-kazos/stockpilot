@@ -76,17 +76,21 @@ const handler = async (event) => {
 
     const cleanShopUrl = shopUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
     // Extract the endpoint (products, orders, etc.) from the path
-    const endpoint = event.path.split('/').pop();
+    const pathParts = event.path.split('/');
+    const endpoint = pathParts[pathParts.length - 1];
     
     // Add pagination parameters for maximum items
     const queryParams = new URLSearchParams({
       limit: '250', // Maximum allowed by Shopify
-      status: 'any'
+      ...(endpoint === 'orders' ? { status: 'any' } : {})
     });
+    
+    // Construct the full Shopify API URL
+    const shopifyUrl = `https://${cleanShopUrl}/admin/api/2024-01/${endpoint}.json?${queryParams}`;
     
     console.log('Making Shopify request:', {
       method: event.httpMethod,
-      url: `https://${cleanShopUrl}/admin/api/2024-01/${endpoint}.json?${queryParams}`,
+      url: shopifyUrl,
       hasToken: !!apiToken,
       endpoint
     });
@@ -94,7 +98,7 @@ const handler = async (event) => {
     // Make request to Shopify
     const response = await axios({
       method: event.httpMethod,
-      url: `https://${cleanShopUrl}/admin/api/2024-01/${endpoint}.json?${queryParams}`,
+      url: shopifyUrl,
       headers: {
         'X-Shopify-Access-Token': apiToken,
         'Content-Type': 'application/json',

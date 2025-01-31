@@ -14,7 +14,10 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ products = [], orders 
 
     const totalProducts = products.length;
     const totalOrders = orders.length;
-    
+
+    console.log('MetricCards: Calculated totalProducts', totalProducts);
+    console.log('MetricCards: Calculated totalOrders', totalOrders);
+
     // Calculate total revenue from orders
     const totalRevenue = orders.reduce((sum, order) => {
       const orderTotal = Number(order.total_price) || 0;

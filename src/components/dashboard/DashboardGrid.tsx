@@ -26,6 +26,12 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
   orders,
   transformedProducts,
 }) => {
+
+  console.log('DashboardGrid: Products received', products.length);
+  console.log('DashboardGrid: Orders received', orders.length);
+  console.log('DashboardGrid: TransformedProducts received', transformedProducts.length);
+
+
   return (
     <FilterProvider>
       {/* The grid container. */}
