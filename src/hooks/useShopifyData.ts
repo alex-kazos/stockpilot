@@ -38,73 +38,58 @@ export const useShopifyData = (options: UseShopifyDataOptions = {}): UseShopifyD
       setLoading(true);
       setError(null);
 
+      logger.debug('useShopifyData', 'Starting data fetch', {
+        userId: user.uid,
+        options
+      });
+
       const promises: Promise<void>[] = [];
 
-      if (options.fetchProducts) {
-        const cachedProducts = cacheService.getData<ShopifyProduct>(user.uid, 'products');
-        if (cachedProducts) {
-          setProducts(cachedProducts);
-          logger.debug('useShopifyData', 'Using cached products', {
-            count: cachedProducts.length,
-            userId: user.uid
-          });
-        } else {
-          promises.push(
-            shopifyService.getProducts()
-              .then(data => {
-                setProducts(data);
-                cacheService.setData(user.uid, 'products', data);
-              })
-          );
-        }
+      if (options.fetchProducts !== false) {  // Default to true if not specified
+        logger.debug('useShopifyData', 'Fetching products', { userId: user.uid });
+        promises.push(
+          shopifyService.getProducts()
+            .then(data => {
+              logger.debug('useShopifyData', 'Products fetched successfully', {
+                count: data.length,
+                userId: user.uid,
+                firstProduct: data[0]?.id
+              });
+              setProducts(data);
+              cacheService.setData(user.uid, 'products', data);
+            })
+        );
       }
 
-      if (options.fetchOrders) {
-        const cachedOrders = cacheService.getData<ShopifyOrder>(user.uid, 'orders');
-        if (cachedOrders) {
-          setOrders(cachedOrders);
-          logger.debug('useShopifyData', 'Using cached orders', {
-            count: cachedOrders.length,
-            userId: user.uid
-          });
-        } else {
-          promises.push(
-            shopifyService.getOrders()
-              .then(data => {
-                setOrders(data);
-                cacheService.setData(user.uid, 'orders', data);
-              })
-          );
-        }
-      }
-
-      if (options.fetchCustomers) {
-        const cachedCustomers = cacheService.getData<ShopifyCustomer>(user.uid, 'customers');
-        if (cachedCustomers) {
-          setCustomers(cachedCustomers);
-          logger.debug('useShopifyData', 'Using cached customers', {
-            count: cachedCustomers.length,
-            userId: user.uid
-          });
-        } else {
-          promises.push(
-            shopifyService.getCustomers()
-              .then(data => {
-                setCustomers(data);
-                cacheService.setData(user.uid, 'customers', data);
-              })
-          );
-        }
+      if (options.fetchOrders !== false) {  // Default to true if not specified
+        logger.debug('useShopifyData', 'Fetching orders', { userId: user.uid });
+        promises.push(
+          shopifyService.getOrders()
+            .then(data => {
+              logger.debug('useShopifyData', 'Orders fetched successfully', {
+                count: data.length,
+                userId: user.uid,
+                firstOrder: data[0]?.id
+              });
+              setOrders(data);
+              cacheService.setData(user.uid, 'orders', data);
+            })
+        );
       }
 
       await Promise.all(promises);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch Shopify data';
-      setError(errorMessage);
+      logger.debug('useShopifyData', 'All data fetched successfully', {
+        userId: user.uid,
+        productsCount: products.length,
+        ordersCount: orders.length
+      });
+    } catch (err: any) {
+      const errorMessage = err.message || 'Error fetching data';
       logger.error('useShopifyData', 'Error fetching data', {
         error: errorMessage,
         userId: user.uid
       });
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -112,14 +97,18 @@ export const useShopifyData = (options: UseShopifyDataOptions = {}): UseShopifyD
 
   useEffect(() => {
     fetchData();
-  }, [user?.uid, options.fetchProducts, options.fetchOrders, options.fetchCustomers]);
+  }, [user?.uid, options.fetchProducts, options.fetchOrders]);
 
   const refetch = async () => {
-    if (user?.uid) {
-      cacheService.clearCache(user.uid);
-      await fetchData();
-    }
+    await fetchData();
   };
 
-  return { products, orders, customers, loading, error, refetch };
+  return {
+    products,
+    orders,
+    customers,
+    loading,
+    error,
+    refetch
+  };
 };

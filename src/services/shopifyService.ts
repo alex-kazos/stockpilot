@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { ShopifyProduct, ShopifyOrder, ShopifyCustomer } from '../types/shopify';
 import { getAuth } from 'firebase/auth';
@@ -104,8 +104,16 @@ class ShopifyService {
   }
 
   private createShopifyClient(token: string, shopUrl: string) {
+    const auth = getAuth();
+    const userId = auth.currentUser?.uid;
+    
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
     logger.debug('ShopifyService', 'Creating Shopify client', {
-      fileName: this.fileName
+      fileName: this.fileName,
+      userId
     });
     
     return axios.create({
@@ -113,7 +121,8 @@ class ShopifyService {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'X-Shopify-Access-Token': token
+        'X-Shopify-Access-Token': token,
+        'X-User-ID': userId
       },
       timeout: 30000,
       validateStatus: (status) => {
@@ -179,150 +188,107 @@ class ShopifyService {
     return { hasNextPage: false, endCursor: null };
   }
 
+  private async getAllPages<T>(client: AxiosInstance, endpoint: string, dataKey: string): Promise<T[]> {
+    let allItems: T[] = [];
+    let hasNextPage = true;
+    let nextPageInfo = '';
+
+    while (hasNextPage) {
+      const url = nextPageInfo 
+        ? `${endpoint}?page_info=${nextPageInfo}`
+        : endpoint;
+
+      const response = await client.get(url);
+      const items = response.data[dataKey] || [];
+      allItems = [...allItems, ...items];
+
+      // Check for next page in Link header
+      const linkHeader = response.headers['link'];
+      if (linkHeader) {
+        const nextLink = linkHeader.split(',').find(link => link.includes('rel="next"'));
+        if (nextLink) {
+          const pageInfoMatch = nextLink.match(/page_info=([^>&"]*)/);
+          nextPageInfo = pageInfoMatch ? pageInfoMatch[1] : '';
+          hasNextPage = true;
+        } else {
+          hasNextPage = false;
+        }
+      } else {
+        hasNextPage = false;
+      }
+
+      logger.debug('ShopifyService', `Fetched page of ${dataKey}`, {
+        fileName: this.fileName,
+        itemCount: items.length,
+        totalCount: allItems.length,
+        hasNextPage
+      });
+    }
+
+    return allItems;
+  }
+
   async getProducts(params: QueryParams = {}): Promise<ShopifyProduct[]> {
     try {
+      logger.debug('ShopifyService', 'Fetching all products', {
+        fileName: this.fileName,
+        params
+      });
+
       const { apiToken, shopUrl } = await this.getCredentials();
-      
-      // Log credentials
-      logger.debug('ShopifyService', 'Using credentials for products request:', {
-        hasToken: !!apiToken,
-        shopUrl,
-        fileName: this.fileName
-      });
-
       const client = this.createShopifyClient(apiToken, shopUrl);
+
+      // Get all pages of products
+      const allProducts = await this.getAllPages<ShopifyProduct>(client, '/api/shopify/products', 'products');
       
-      await this.testConnection(client);
-
-      // Use a higher limit to get all products at once
-      const queryParams: Record<string, string> = {
-        limit: '250', // Maximum allowed by Shopify
-        status: 'active', // Only get active products
-        fields: 'id,title,variants,product_type,created_at,updated_at'
-      };
-
-      // Log request details
-      logger.debug('ShopifyService', 'Making products request:', {
-        endpoint: `/admin/api/${this.shopifyApiVersion}/products.json`,
-        params: queryParams,
-        fileName: this.fileName
+      logger.debug('ShopifyService', 'All products fetched successfully', {
+        fileName: this.fileName,
+        count: allProducts.length
       });
 
-      // Try to fetch products from admin API
-      const response = await client.get(`/admin/api/${this.shopifyApiVersion}/products.json`, {
-        params: queryParams,
-        headers: {
-          'X-Shopify-Access-Scope': 'read_products,read_orders,read_inventory',
-        }
-      });
-
-      // Log raw response
-      logger.debug('ShopifyService', 'Raw products response:', {
-        status: response.status,
-        hasData: !!response.data,
-        dataKeys: Object.keys(response.data),
-        responseData: response.data,
-        headers: response.headers,
-        fileName: this.fileName
-      });
-
-      const products = response.data.products;
-      if (!Array.isArray(products)) {
-        logger.error('ShopifyService', 'Invalid products response format:', {
-          responseData: response.data,
-          fileName: this.fileName
-        });
-        throw new Error('Invalid response format: products is not an array');
-      }
-
-      // Add debug logging
-      logger.debug('ShopifyService', 'Fetched products successfully', {
-        count: products.length,
-        firstProduct: products[0],
-        fileName: this.fileName
-      });
-
-      // Apply the user's limit if specified
-      return params.limit ? products.slice(0, params.limit) : products;
-
+      return allProducts;
     } catch (error: any) {
       logger.error('ShopifyService', 'Failed to fetch products', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+        fileName: this.fileName,
+        error: error.message,
         status: error.response?.status,
         statusText: error.response?.statusText,
-        responseData: error.response?.data,
-        headers: error.response?.headers,
-        config: error.config,
-        fileName: this.fileName
+        url: error.config?.url,
+        responseData: error.response?.data
       });
-
-      // Check for specific permission errors
-      if (error.response?.status === 403) {
-        logger.error('ShopifyService', 'Permission denied - check app scopes', {
-          fileName: this.fileName,
-          requiredScopes: ['read_products', 'read_orders', 'read_inventory']
-        });
-      }
-
-      this.handleApiError(error);
-      throw error;
+      throw new Error(`Shopify API Error: ${error.message}`);
     }
   }
 
   async getOrders(params: QueryParams = {}): Promise<ShopifyOrder[]> {
     try {
+      logger.debug('ShopifyService', 'Fetching all orders', {
+        fileName: this.fileName,
+        params
+      });
+
       const { apiToken, shopUrl } = await this.getCredentials();
-      
-      // Log credentials
-      logger.debug('ShopifyService', 'Using credentials for orders request:', {
-        hasToken: !!apiToken,
-        shopUrl,
-        fileName: this.fileName
-      });
-
       const client = this.createShopifyClient(apiToken, shopUrl);
+
+      // Get all pages of orders
+      const allOrders = await this.getAllPages<ShopifyOrder>(client, '/api/shopify/orders', 'orders');
       
-      await this.testConnection(client);
-
-      // Use a higher limit to get all orders at once
-      const queryParams: Record<string, string> = {
-        limit: '250', // Maximum allowed by Shopify
-        status: 'any'
-      };
-
-      // Log request details
-      logger.debug('ShopifyService', 'Making orders request:', {
-        endpoint: `/admin/api/${this.shopifyApiVersion}/orders.json`,
-        params: queryParams,
-        fileName: this.fileName
+      logger.debug('ShopifyService', 'All orders fetched successfully', {
+        fileName: this.fileName,
+        count: allOrders.length
       });
 
-      const response = await client.get(`/admin/api/${this.shopifyApiVersion}/orders.json`, {
-        params: queryParams
-      });
-
-      const orders = response.data.orders;
-      if (!Array.isArray(orders)) {
-        throw new Error('Invalid response format: orders is not an array');
-      }
-
-      // Add debug logging
-      logger.debug('ShopifyService', 'Fetched orders successfully', {
-        count: orders.length,
-        firstOrder: orders[0],
-        fileName: this.fileName
-      });
-
-      // Apply the user's limit if specified
-      return params.limit ? orders.slice(0, params.limit) : orders;
-
-    } catch (error) {
+      return allOrders;
+    } catch (error: any) {
       logger.error('ShopifyService', 'Failed to fetch orders', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        fileName: this.fileName
+        fileName: this.fileName,
+        error: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        url: error.config?.url,
+        responseData: error.response?.data
       });
-      this.handleApiError(error);
-      throw error;
+      throw new Error(`Shopify API Error: ${error.message}`);
     }
   }
 

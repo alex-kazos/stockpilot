@@ -48,8 +48,8 @@ export const DashboardPage: React.FC = () => {
     error: dataError,
     refetch 
   } = useShopifyData({
-    fetchProducts: !!credentials, // Temporarily remove subscription check
-    fetchOrders: !!credentials // Temporarily remove subscription check
+    fetchProducts: true,  // Always fetch products
+    fetchOrders: true    // Always fetch orders
   });
 
   // Check subscription status
@@ -66,70 +66,93 @@ export const DashboardPage: React.FC = () => {
 
   // Transform Shopify products to dashboard format
   const dashboardProducts = useMemo(() => {
-    if (!products || !orders) return [];
+    if (!products?.length) {
+      logger.debug('DashboardPage', 'No products to transform', {
+        productsCount: products?.length || 0
+      });
+      return [];
+    }
+
+    logger.debug('DashboardPage', 'Transforming products', {
+      productsCount: products.length,
+      firstProductId: products[0]?.id
+    });
 
     return products.map(product => {
-      // Get all line items for this product
-      const productLineItems = orders.flatMap(order => 
-        order.line_items.filter(item => item.product_id === product.id)
-      );
-
-      // Calculate total sales quantity
-      const totalSales = productLineItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
-
-      // Calculate revenue
-      const revenue = productLineItems.reduce((sum, item) => 
-        sum + (parseFloat(item.price || '0') * (item.quantity || 0)), 0
-      );
-
-      return {
-        id: product.id.toString(),
-        name: product.title,
-        sku: product.variants[0]?.sku || product.id.toString(),
-        stock: product.variants[0]?.inventory_quantity || 0,
+      const transformedProduct = {
+        id: product.id?.toString() || '',
+        name: product.title || 'Untitled Product',
+        sku: product.variants?.[0]?.sku || product.id?.toString() || '',
+        stock: Number(product.variants?.[0]?.inventory_quantity) || 0,
         product_type: product.product_type || 'Uncategorized',
-        sales: totalSales,
-        revenue: revenue,
-        variants: product.variants,
-        created_at: product.created_at,
-        updated_at: product.updated_at,
-        status: product.status,
-        vendor: product.vendor,
-        price: product.variants[0]?.price || '0',
-        compare_at_price: product.variants[0]?.compare_at_price || '0'
+        sales: 0,  // Will be calculated below
+        revenue: 0,  // Will be calculated below
+        variants: product.variants || [],
+        created_at: product.created_at || new Date().toISOString(),
+        updated_at: product.updated_at || new Date().toISOString(),
+        status: 'active',
+        vendor: '',
+        price: product.variants?.[0]?.price || '0',
+        compare_at_price: '0'
       };
+
+      // Calculate sales and revenue if we have orders
+      if (orders?.length) {
+        const productLineItems = orders.flatMap(order => 
+          (order.line_items || []).filter(item => 
+            item.product_id?.toString() === product.id?.toString()
+          )
+        );
+
+        transformedProduct.sales = productLineItems.reduce((sum, item) => 
+          sum + (Number(item.quantity) || 0), 0
+        );
+
+        transformedProduct.revenue = productLineItems.reduce((sum, item) => 
+          sum + ((Number(item.price) || 0) * (Number(item.quantity) || 0)), 0
+        );
+      }
+
+      logger.debug('DashboardPage', 'Transformed product', {
+        productId: transformedProduct.id,
+        sales: transformedProduct.sales,
+        revenue: transformedProduct.revenue,
+        stock: transformedProduct.stock
+      });
+
+      return transformedProduct;
     });
   }, [products, orders]);
 
   // Transform and memoize products data for AI recommendations
   const transformedProducts = useMemo(() => {
-    logger.debug('DashboardPage', 'Transforming products', {
-      hasProducts: !!products,
-      productsCount: products?.length,
-      hasOrders: !!orders,
-      ordersCount: orders?.length
+    logger.debug('DashboardPage', 'Preparing AI recommendations', {
+      hasProducts: !!products?.length,
+      productsCount: products?.length || 0,
+      hasOrders: !!orders?.length,
+      ordersCount: orders?.length || 0
     });
 
-    if (!products || !orders) return [];
+    if (!products?.length || !orders?.length) return [];
     
     try {
       const mergedProducts = mergeProductsBySku(products, orders);
 
-      logger.debug('DashboardPage', 'Products merged', {
+      logger.debug('DashboardPage', 'Products merged for AI', {
         mergedCount: mergedProducts.length,
         firstMerged: mergedProducts[0]
       });
 
       const transformed = transformForRecommendations(mergedProducts);
 
-      logger.debug('DashboardPage', 'Products transformed', {
+      logger.debug('DashboardPage', 'Products transformed for AI', {
         transformedCount: transformed.length,
         firstTransformed: transformed[0]
       });
 
       return transformed;
     } catch (error) {
-      logger.error('DashboardPage', 'Error transforming products', { error });
+      logger.error('DashboardPage', 'Error transforming products for AI', { error });
       return [];
     }
   }, [products, orders]);
