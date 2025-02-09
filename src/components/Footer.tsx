@@ -25,7 +25,7 @@ export default function Footer() {
               </a>
             </h3>
             <p className="text-gray-400 max-w-md">
-              We build AI-first products for businesses from scratch or as SaaS.
+              Your AI Idea, Built by Those Who Launch Their Own.
             </p>
           </div>
 

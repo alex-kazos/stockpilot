@@ -55,7 +55,7 @@ export default function Pricing() {
   const plans = [
     {
       name: 'Inventory Essentials',
-      price: 295,
+      price: 180,
       description: 'Complete inventory management solution with AI-powered features and chatbot support.',
       features: [
         'Single Platform Connections (E-commerce & POS)',

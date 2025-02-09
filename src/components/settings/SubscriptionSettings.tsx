@@ -15,13 +15,13 @@ const planDetails: Record<'monthly' | 'yearly', PlanDetails> = {
   monthly: {
     title: 'StockPilot Monthly',
     subscriptionId: 'monthly-plan',
-    price: 295,
+    price: 195,
     features: []
   },
   yearly: {
     title: 'StockPilot Yearly',
     subscriptionId: 'yearly-plan',
-    price: 235,
+    price: 144,
     features: []
   }
 };
