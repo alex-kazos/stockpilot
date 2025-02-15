@@ -5,10 +5,10 @@ const platforms = [
     name: 'Shopify',
     logo: '/images/platforms/shopify.svg'
   },
-  {
-    name: 'Shopify POS',
-    logo: '/images/platforms/shopify-pos.png'
-  },
+  // {
+  //   name: 'Shopify POS',
+  //   logo: '/images/platforms/shopify-pos.png'
+  // },
   {
     name: 'BigCommerce',
     logo: '/images/platforms/bigcommerce.svg'
