@@ -26,6 +26,11 @@ interface QueryParams {
   pageInfo?: string;
 }
 
+interface PaginationInfo {
+  hasNextPage: boolean;
+  endCursor: string | null;
+}
+
 class ShopifyService {
   private static instance: ShopifyService;
   private credentials: ShopifyCredentials | null = null;
@@ -171,58 +176,79 @@ class ShopifyService {
     }
   }
 
-  private parsePaginationHeaders(linkHeader?: string): { hasNextPage: boolean; endCursor: string | null } {
+  private parsePaginationHeaders(linkHeader?: string): PaginationInfo {
     if (!linkHeader) {
       return { hasNextPage: false, endCursor: null };
     }
 
-    const pageInfoMatch = linkHeader.match(/page_info=([^>&"]+)/);
-    if (pageInfoMatch && pageInfoMatch[1]) {
-      try {
-        return { hasNextPage: true, endCursor: pageInfoMatch[1] };
-      } catch (error) {
-        logger.error('ShopifyService', 'Failed to parse pagination token', { error });
-      }
+    const links = linkHeader.split(',');
+    const nextLink = links.find(link => link.includes('rel="next"'));
+
+    if (!nextLink) {
+      return { hasNextPage: false, endCursor: null };
     }
 
-    return { hasNextPage: false, endCursor: null };
+    const pageInfoMatch = nextLink.match(/page_info=([^>&"]+)/);
+    return {
+      hasNextPage: true,
+      endCursor: pageInfoMatch ? pageInfoMatch[1] : null
+    };
   }
 
   private async getAllPages<T>(client: AxiosInstance, endpoint: string, dataKey: string): Promise<T[]> {
     let allItems: T[] = [];
     let hasNextPage = true;
     let nextPageInfo = '';
+    const limit = 250; // Shopify's maximum limit per page
 
     while (hasNextPage) {
-      const url = nextPageInfo 
-        ? `${endpoint}?page_info=${nextPageInfo}`
-        : endpoint;
+      try {
+        const queryParams = new URLSearchParams({
+          limit: limit.toString()
+        });
 
-      const response = await client.get(url);
-      const items = response.data[dataKey] || [];
-      allItems = [...allItems, ...items];
-
-      // Check for next page in Link header
-      const linkHeader = response.headers['link'];
-      if (linkHeader) {
-        const nextLink = linkHeader.split(',').find(link => link.includes('rel="next"'));
-        if (nextLink) {
-          const pageInfoMatch = nextLink.match(/page_info=([^>&"]*)/);
-          nextPageInfo = pageInfoMatch ? pageInfoMatch[1] : '';
-          hasNextPage = true;
-        } else {
-          hasNextPage = false;
+        if (nextPageInfo) {
+          queryParams.append('page_info', nextPageInfo);
         }
-      } else {
-        hasNextPage = false;
-      }
 
-      logger.debug('ShopifyService', `Fetched page of ${dataKey}`, {
-        fileName: this.fileName,
-        itemCount: items.length,
-        totalCount: allItems.length,
-        hasNextPage
-      });
+        const url = `${endpoint}?${queryParams.toString()}`;
+        
+        logger.debug('ShopifyService', 'Fetching page', {
+          fileName: this.fileName,
+          url,
+          currentCount: allItems.length
+        });
+
+        const response = await client.get(url);
+        const items = response.data[dataKey] || [];
+        allItems = [...allItems, ...items];
+
+        // Parse Link header for pagination
+        const linkHeader = response.headers['link'];
+        const paginationInfo = this.parsePaginationHeaders(linkHeader);
+        
+        hasNextPage = paginationInfo.hasNextPage;
+        nextPageInfo = paginationInfo.endCursor || '';
+
+        logger.debug('ShopifyService', `Fetched page of ${dataKey}`, {
+          fileName: this.fileName,
+          pageItemCount: items.length,
+          totalCount: allItems.length,
+          hasNextPage,
+          rateLimit: response.headers['x-shopify-shop-api-call-limit']
+        });
+
+        // Add a small delay to respect rate limits
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } catch (error: any) {
+        logger.error('ShopifyService', `Error fetching ${dataKey} page`, {
+          fileName: this.fileName,
+          error: error.message,
+          status: error.response?.status,
+          currentCount: allItems.length
+        });
+        throw error;
+      }
     }
 
     return allItems;
@@ -238,10 +264,14 @@ class ShopifyService {
       const { apiToken, shopUrl } = await this.getCredentials();
       const client = this.createShopifyClient(apiToken, shopUrl);
 
-      // Get all pages of products
-      const allProducts = await this.getAllPages<ShopifyProduct>(client, '/api/shopify/products', 'products');
+      // Get all pages of products using the admin API endpoint
+      const allProducts = await this.getAllPages<ShopifyProduct>(
+        client, 
+        `/admin/api/${this.shopifyApiVersion}/products`,
+        'products'
+      );
       
-      logger.debug('ShopifyService', 'All products fetched successfully', {
+      logger.success('ShopifyService', 'All products fetched successfully', {
         fileName: this.fileName,
         count: allProducts.length
       });
@@ -270,10 +300,14 @@ class ShopifyService {
       const { apiToken, shopUrl } = await this.getCredentials();
       const client = this.createShopifyClient(apiToken, shopUrl);
 
-      // Get all pages of orders
-      const allOrders = await this.getAllPages<ShopifyOrder>(client, '/api/shopify/orders', 'orders');
+      // Get all pages of orders using the admin API endpoint
+      const allOrders = await this.getAllPages<ShopifyOrder>(
+        client, 
+        `/admin/api/${this.shopifyApiVersion}/orders`,
+        'orders'
+      );
       
-      logger.debug('ShopifyService', 'All orders fetched successfully', {
+      logger.success('ShopifyService', 'All orders fetched successfully', {
         fileName: this.fileName,
         count: allOrders.length
       });
@@ -296,49 +330,14 @@ class ShopifyService {
     try {
       logger.info('ShopifyService', 'Starting customers fetch', { fileName: this.fileName });
       const { apiToken, shopUrl } = await this.getCredentials();
-      
-      // Log credentials
-      logger.debug('ShopifyService', 'Using credentials for customers request:', {
-        hasToken: !!apiToken,
-        shopUrl,
-        fileName: this.fileName
-      });
-
       const client = this.createShopifyClient(apiToken, shopUrl);
-      let allCustomers: ShopifyCustomer[] = [];
-      let hasNextPage = true;
-      let currentPageInfo = params.pageInfo;
 
-      while (hasNextPage) {
-        const queryParams = new URLSearchParams({
-          limit: (params.limit || 50).toString()
-        });
-
-        if (currentPageInfo) {
-          queryParams.append('page_info', currentPageInfo);
-        }
-
-        logger.debug('ShopifyService', 'Making API request', {
-          fileName: this.fileName,
-          shopUrl,
-          pageInfo: currentPageInfo
-        });
-
-        const response = await client.get(`/admin/api/${this.shopifyApiVersion}/customers.json?${queryParams.toString()}`);
-
-        allCustomers = [...allCustomers, ...response.data.customers];
-        
-        const paginationInfo = this.parsePaginationHeaders(response.headers.link);
-        hasNextPage = paginationInfo.hasNextPage;
-        currentPageInfo = paginationInfo.endCursor;
-
-        logger.debug('ShopifyService', 'Fetched page of customers', {
-          fileName: this.fileName,
-          count: response.data.customers.length,
-          totalCount: allCustomers.length,
-          hasNextPage
-        });
-      }
+      // Get all pages of customers using the admin API endpoint
+      const allCustomers = await this.getAllPages<ShopifyCustomer>(
+        client,
+        `/admin/api/${this.shopifyApiVersion}/customers`,
+        'customers'
+      );
 
       logger.success('ShopifyService', 'Successfully fetched all customers', {
         fileName: this.fileName,
