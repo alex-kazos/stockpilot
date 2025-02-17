@@ -22,24 +22,25 @@ import { subscriptionService } from '../services/subscriptionService';
 import { SUBSCRIPTION_URLS } from '../services/subscriptionService';
 import { AIAssistantButton } from '../components/assistant/AIAssistantButton';
 import { AIAssistantPanel } from '../components/assistant/AIAssistantPanel';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { StoreSetupWizard } from '../components/onboarding/StoreSetupWizard';
+
+interface Store {
+  id: string;
+  name: string;
+  type: 'shopify' | 'square';
+}
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
   const { credentials, loading: credentialsLoading } = useShopifyCredentials();
+  const [stores, setStores] = useState<Store[]>([]);
+  const [currentStore, setCurrentStore] = useState<Store | null>(null);
   const [subscription, setSubscription] = useState(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
-
-  // Add debug logging
-  useEffect(() => {
-    logger.debug('DashboardPage', 'Subscription and credentials state', {
-      hasCredentials: !!credentials,
-      subscriptionStatus: subscription?.status,
-      isSubscriptionActive: subscriptionService.isSubscriptionActive(subscription),
-      willFetchProducts: !!credentials && subscriptionService.isSubscriptionActive(subscription)
-    });
-  }, [credentials, subscription]);
 
   const { 
     products, 
@@ -48,12 +49,9 @@ export const DashboardPage: React.FC = () => {
     error: dataError,
     refetch 
   } = useShopifyData({
-    fetchProducts: true,  // Always fetch products
-    fetchOrders: true    // Always fetch orders
+    fetchProducts: currentStore?.type === 'shopify',
+    fetchOrders: currentStore?.type === 'shopify'
   });
-
-  console.log('DashboardPage: Products received', products?.length);
-  console.log('DashboardPage: Orders received', orders?.length);
 
   // Check subscription status
   useEffect(() => {
@@ -67,65 +65,72 @@ export const DashboardPage: React.FC = () => {
     checkSubscription();
   }, [user]);
 
+  // Fetch all stores for the current user
+  useEffect(() => {
+    const fetchStores = async () => {
+      if (!user) return;
+
+      try {
+        // Fetch Shopify stores
+        const shopifyQuery = query(
+          collection(db, 'shopify_credentials'),
+          where('userId', '==', user.uid)
+        );
+        const shopifyDocs = await getDocs(shopifyQuery);
+        const shopifyStores = shopifyDocs.docs.map(doc => ({
+          id: doc.id,
+          name: doc.data().shopUrl,
+          type: 'shopify' as const
+        }));
+
+        // Fetch Square stores
+        const squareQuery = query(
+          collection(db, 'square_credentials'),
+          where('userId', '==', user.uid)
+        );
+        const squareDocs = await getDocs(squareQuery);
+        const squareStores = squareDocs.docs.map(doc => ({
+          id: doc.id,
+          name: `Square Store ${doc.data().locationId}`,
+          type: 'square' as const
+        }));
+
+        const allStores = [...shopifyStores, ...squareStores];
+        setStores(allStores);
+
+        // Set the first store as current if none is selected
+        if (allStores.length > 0 && !currentStore) {
+          setCurrentStore(allStores[0]);
+        }
+      } catch (error) {
+        logger.error('DashboardPage', 'Error fetching stores', { error });
+      }
+    };
+
+    fetchStores();
+  }, [user]);
+
   // Transform Shopify products to dashboard format
   const dashboardProducts = useMemo(() => {
-    if (!products?.length) {
-      logger.debug('DashboardPage', 'No products to transform', {
-        productsCount: products?.length || 0
-      });
-      return [];
-    }
+    if (!products?.length) return [];
 
-    logger.debug('DashboardPage', 'Transforming products', {
-      productsCount: products.length,
-      firstProductId: products[0]?.id
-    });
-
-    return products.map(product => {
-      const transformedProduct = {
-        id: product.id?.toString() || '',
-        name: product.title || 'Untitled Product',
-        sku: product.variants?.[0]?.sku || product.id?.toString() || '',
-        stock: Number(product.variants?.[0]?.inventory_quantity) || 0,
-        product_type: product.product_type || 'Uncategorized',
-        sales: 0,  // Will be calculated below
-        revenue: 0,  // Will be calculated below
-        variants: product.variants || [],
-        created_at: product.created_at || new Date().toISOString(),
-        updated_at: product.updated_at || new Date().toISOString(),
-        status: 'active',
-        vendor: '',
-        price: product.variants?.[0]?.price || '0',
-        compare_at_price: '0'
-      };
-
-      // Calculate sales and revenue if we have orders
-      if (orders?.length) {
-        const productLineItems = orders.flatMap(order => 
-          (order.line_items || []).filter(item => 
-            item.product_id?.toString() === product.id?.toString()
-          )
-        );
-
-        transformedProduct.sales = productLineItems.reduce((sum, item) => 
-          sum + (Number(item.quantity) || 0), 0
-        );
-
-        transformedProduct.revenue = productLineItems.reduce((sum, item) => 
-          sum + ((Number(item.price) || 0) * (Number(item.quantity) || 0)), 0
-        );
-      }
-
-      logger.debug('DashboardPage', 'Transformed product', {
-        productId: transformedProduct.id,
-        sales: transformedProduct.sales,
-        revenue: transformedProduct.revenue,
-        stock: transformedProduct.stock
-      });
-
-      return transformedProduct;
-    });
-  }, [products, orders]);
+    return products.map(product => ({
+      id: product.id?.toString() || '',
+      name: product.title || 'Untitled Product',
+      sku: product.variants?.[0]?.sku || product.id?.toString() || '',
+      stock: Number(product.variants?.[0]?.inventory_quantity) || 0,
+      product_type: product.product_type || 'Uncategorized',
+      sales: 0,
+      revenue: 0,
+      variants: product.variants || [],
+      created_at: product.created_at || new Date().toISOString(),
+      updated_at: product.updated_at || new Date().toISOString(),
+      status: 'active',
+      vendor: product.vendor || '',
+      price: product.variants?.[0]?.price || '0',
+      compare_at_price: product.variants?.[0]?.compare_at_price || '0'
+    }));
+  }, [products]);
 
   // Transform and memoize products data for AI recommendations
   const transformedProducts = useMemo(() => {
@@ -161,11 +166,16 @@ export const DashboardPage: React.FC = () => {
   }, [products, orders]);
 
   // Loading states
-  const isLoading = credentialsLoading || dataLoading || subscriptionLoading;
+  const isLoading = dataLoading || subscriptionLoading;
   
   // Show loading state
   if (isLoading) {
     return <LoadingState message="Loading dashboard data..." />;
+  }
+
+  // Show setup wizard if no stores
+  if (stores.length === 0) {
+    return <StoreSetupWizard />;
   }
 
   // Show error state
@@ -173,15 +183,13 @@ export const DashboardPage: React.FC = () => {
     return <ErrorState error={dataError} onRetry={refetch} />;
   }
 
-  // Show setup if no credentials
-  if (!credentials) {
-    return <ShopifySetup />;
-  }
-
+  // Show subscription required state
   if (!subscriptionService.isSubscriptionActive(subscription)) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-2 sm:p-3 md:p-4">
-        <h1 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">Subscription Required</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">
+          Subscription Required
+        </h1>
         <p className="text-gray-400 text-center mb-4 sm:mb-6 px-2 sm:px-0">
           Please subscribe to access the dashboard and all features.
         </p>
@@ -198,13 +206,25 @@ export const DashboardPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#13111c] text-white p-3 sm:p-4 md:p-6">
       <DashboardHeader 
-        storeName={credentials.shopUrl} 
+        storeName={currentStore?.name || 'No store selected'} 
         onRefresh={async () => {
           setIsRefreshing(true);
           await refetch();
           setIsRefreshing(false);
         }}
         isRefreshing={isRefreshing || dataLoading}
+        stores={stores}
+        currentStore={currentStore || {
+          id: '',
+          name: 'No store selected',
+          type: 'shopify'
+        }}
+        onStoreChange={(storeId) => {
+          const store = stores.find(s => s.id === storeId);
+          if (store) {
+            setCurrentStore(store);
+          }
+        }}
       />
       
       <MetricCards products={products || []} orders={orders || []} />

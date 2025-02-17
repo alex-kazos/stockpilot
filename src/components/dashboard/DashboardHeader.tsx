@@ -3,17 +3,32 @@ import { Store, Settings, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import LogoutButton from '../LogoutButton';
 import { ROUTES } from '../../constants/routes';
+import { StoreSelector } from './StoreSelector';
 
 interface DashboardHeaderProps {
   storeName: string;
-  onRefresh?: () => Promise<void>;
-  isRefreshing?: boolean;
+  onRefresh: () => void;
+  isRefreshing: boolean;
+  stores: Array<{
+    id: string;
+    name: string;
+    type: 'shopify' | 'square';
+  }>;
+  currentStore: {
+    id: string;
+    name: string;
+    type: 'shopify' | 'square';
+  };
+  onStoreChange: (storeId: string) => void;
 }
 
-export const DashboardHeader: React.FC<DashboardHeaderProps> = ({ 
-  storeName, 
+export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
+  storeName,
   onRefresh,
-  isRefreshing = false 
+  isRefreshing,
+  stores,
+  currentStore,
+  onStoreChange
 }) => {
   const navigate = useNavigate();
 
@@ -29,27 +44,25 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
         <h1 className="text-xl sm:text-2xl font-bold text-white">StockPilot</h1>
       </div>
 
-      <div className="text-gray-400 text-sm hidden sm:block">
-        Connected to: <span className="text-white">{storeName}</span>
-      </div>
+      {/*<div className="text-gray-400 text-sm hidden sm:block">*/}
+      {/*  Connected to: <span className="text-white">{storeName}</span>*/}
+      {/*</div>*/}
 
       <div className="flex items-center gap-2 sm:gap-4">
-        {onRefresh && (
-          <button
-            onClick={onRefresh}
-            disabled={isRefreshing}
-            className={`p-2 rounded-lg hover:bg-gray-700 transition-colors ${
-              isRefreshing ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
-            aria-label="Refresh data"
-          >
-            <RefreshCw 
-              className={`w-5 h-5 text-gray-400 ${
-                isRefreshing ? 'animate-spin' : ''
-              }`} 
-            />
-          </button>
-        )}
+        <StoreSelector
+          currentStore={currentStore}
+          stores={stores}
+          onStoreChange={onStoreChange}
+        />
+      </div>
+      <div className="flex items-center gap-2 sm:gap-4">
+        <button
+          onClick={onRefresh}
+          disabled={isRefreshing}
+          className="p-2 hover:bg-[#1F1D2B] rounded-lg transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`w-5 h-5 text-gray-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+        </button>
         <button
           onClick={() => navigate(ROUTES.SETTINGS)}
           className="p-2 rounded-lg hover:bg-gray-700 transition-colors"
