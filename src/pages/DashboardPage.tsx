@@ -25,6 +25,7 @@ import { AIAssistantPanel } from '../components/assistant/AIAssistantPanel';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { StoreSetupWizard } from '../components/onboarding/StoreSetupWizard';
+import { AIAssistantProvider } from '../contexts/AIAssistantContext';
 
 interface Store {
   id: string;
@@ -235,17 +236,21 @@ export const DashboardPage: React.FC = () => {
         transformedProducts={transformedProducts}
       />
 
-      <AIAssistantButton
-        isOpen={isAssistantOpen}
-        onClick={() => setIsAssistantOpen(!isAssistantOpen)}
-      />
-      
-      <AIAssistantPanel
-        isOpen={isAssistantOpen}
-        onClose={() => setIsAssistantOpen(false)}
-        products={dashboardProducts}
-        orders={orders || []}
-      />
+      <AIAssistantProvider products={dashboardProducts} orders={orders || []}>
+        <AIAssistantButton
+          isOpen={isAssistantOpen}
+          onClick={() => setIsAssistantOpen(!isAssistantOpen)}
+          products={dashboardProducts}
+          orders={orders || []}
+        />
+        
+        <AIAssistantPanel
+          isOpen={isAssistantOpen}
+          onClose={() => setIsAssistantOpen(false)}
+          products={dashboardProducts}
+          orders={orders || []}
+        />
+      </AIAssistantProvider>
     </div>
   );
 };
