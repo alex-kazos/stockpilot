@@ -1,155 +1,92 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Button, Card, Typography, Alert } from '@mui/material';
 import { useAuth } from '../../contexts/AuthContext';
-import { doc, setDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
-import { ArrowRight, Store, Youtube, CheckCircle } from 'lucide-react';
-
+import { useNavigate, useLocation } from 'react-router-dom';
+// Log the environment variable to debug
+console.log('SQUARE_APP_ID from env:', import.meta.env.VITE_SQUARE_APP_ID);
+const SQUARE_APP_ID = import.meta.env.VITE_SQUARE_APP_ID || 'sandbox-sq0idb-jMUbBRSYF2qho07MU3DHnA';
+const SQUARE_OAUTH_URL = 'https://connect.squareup.com/oauth2/authorize';
+// Log the final app ID being used
+console.log('Final SQUARE_APP_ID:', SQUARE_APP_ID);
 export function SquareSetup({ onClose }: { onClose: () => void }) {
-  const [accessToken, setAccessToken] = useState('');
-  const [locationId, setLocationId] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [showSuccess, setShowSuccess] = useState(false);
   const { user } = useAuth();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) {
-      setError('You must be logged in to connect your store');
-      return;
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  useEffect(() => {
+    // Handle OAuth callback
+    const params = new URLSearchParams(location.search);
+    const error = params.get('error');
+    const success = params.get('success');
+    if (error) {
+      setError(decodeURIComponent(error));
+    } else if (success) {
+      setSuccess(true);
     }
+  }, [location]);
+  const handleConnect = () => {
+    if (!user) return;
+// Generate state parameter with userId and redirect URL
+    const redirectUrl = `${window.location.origin}/dashboard/integrations/square`;
+    const state = `${user.uid}|${redirectUrl}`;
 
-    setLoading(true);
-    setError(null);
+// Build OAuth URL with required parameters
+    const params = new URLSearchParams({
+      client_id: SQUARE_APP_ID,
+      response_type: 'code',
+      scope: 'ITEMS_READ INVENTORY_READ ORDERS_READ MERCHANT_PROFILE_READ',
+      session: 'false',
+      state,
+    });
 
-    try {
-      // Store Square credentials in Firebase
-      const docRef = doc(db, 'square_credentials', user.uid);
-      const data = {
-        accessToken,
-        locationId,
-        userId: user.uid,
-        createdAt: new Date().toISOString()
-      };
-      
-      await setDoc(docRef, data);
-
-      // Test the connection
-      const response = await fetch('/api/square/locations', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`API test failed: ${response.statusText}`);
-      }
-
-      setShowSuccess(true);
-      setTimeout(() => {
-        onClose();
-      }, 2000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save credentials');
-    } finally {
-      setLoading(false);
-    }
+// Redirect to Square OAuth page
+    const authUrl = `${SQUARE_OAUTH_URL}?${params.toString()}`;
+    console.log('Redirecting to:', authUrl);
+    window.location.href = authUrl;
   };
-
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="card card-hover max-w-md w-full relative bg-[#1C1B23] p-6 rounded-lg">
-        {showSuccess && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#1C1B23] rounded-lg z-10">
-            <div className="text-center">
-              <div className="flex justify-center mb-4">
-                <div className="p-3 bg-purple-500/10 rounded-full">
-                  <CheckCircle className="w-8 h-8 text-purple-400" />
-                </div>
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Store Connected!</h3>
-              <p className="text-gray-400">Successfully connected to your Square store.</p>
-            </div>
-          </div>
-        )}
-        
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
-        >
-          ×
-        </button>
-
-        <div className="text-center mb-6">
-          <div className="flex items-center justify-center mb-4">
-            <Store className="w-8 h-8 text-purple-500" />
-          </div>
-          <h2 className="text-2xl font-bold text-white mb-2">
-            Connect Your Square Store
-          </h2>
-          <p className="text-gray-400">
-            Enter your Square access token and location ID to get started
-          </p>
-        </div>
-
-        {error && (
-          <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              Access Token
-            </label>
-            <input
-              type="password"
-              value={accessToken}
-              onChange={(e) => setAccessToken(e.target.value)}
-              placeholder="sq0atp-..."
-              className="bg-[#1F1D2A] block w-full px-3 py-2 border border-[#2D2B3B] rounded-lg text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              Location ID
-            </label>
-            <input
-              type="text"
-              value={locationId}
-              onChange={(e) => setLocationId(e.target.value)}
-              placeholder="XXXXXXXXXXXXXX"
-              className="bg-[#1F1D2A] block w-full px-3 py-2 border border-[#2D2B3B] rounded-lg text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              required
-            />
-          </div>
-
-          <a
-            href="https://developer.squareup.com/docs/square-get-started"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center text-sm text-purple-400 hover:text-purple-300 transition-colors"
-          >
-            <Youtube className="w-4 h-4 mr-1" />
-            How to get your Square credentials?
-          </a>
-
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div className="card card-hover max-w-md w-full relative bg-[#1C1B23] p-6 rounded-lg">
           <button
-            type="submit"
-            disabled={loading}
-            className="w-full flex items-center justify-center space-x-2 bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={onClose}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
           >
-            <span>{loading ? 'Connecting...' : 'Connect Store'}</span>
-            {!loading && <ArrowRight className="w-4 h-4" />}
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
           </button>
-        </form>
+          <Card sx={{ p: 3, maxWidth: 600, mx: 'auto', mt: 4 }}>
+            <Typography variant="h5" gutterBottom>
+              Connect Square Store
+            </Typography>
+
+            <Typography variant="body1" sx={{ mb: 3 }}>
+              Connect your Square store to enable automatic inventory synchronization and sales analytics.
+            </Typography>
+
+            {error && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                  {error}
+                </Alert>
+            )}
+
+            {success && (
+                <Alert severity="success" sx={{ mb: 3 }}>
+                  Successfully connected to Square! Your inventory data will begin syncing shortly.
+                </Alert>
+            )}
+
+            <Button
+                variant="contained"
+                color="primary"
+                onClick={handleConnect}
+                disabled={success}
+            >
+              {success ? 'Connected' : 'Connect Square Store'}
+            </Button>
+          </Card>
+        </div>
       </div>
-    </div>
   );
-} 
+}

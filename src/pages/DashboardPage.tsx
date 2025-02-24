@@ -26,6 +26,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { StoreSetupWizard } from '../components/onboarding/StoreSetupWizard';
 import { AIAssistantProvider } from '../contexts/AIAssistantContext';
+import { squareService } from '../../services/square';
 
 interface Store {
   id: string;
@@ -42,6 +43,12 @@ export const DashboardPage: React.FC = () => {
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  const [squareData, setSquareData] = useState<{
+    inventory: any[];
+    orders: any[];
+  }>({ inventory: [], orders: [] });
+  const [squareLoading, setSquareLoading] = useState(false);
+  const [squareError, setSquareError] = useState<Error | null>(null);
 
   const { 
     products, 
@@ -111,6 +118,32 @@ export const DashboardPage: React.FC = () => {
     fetchStores();
   }, [user]);
 
+  // Fetch Square data when a Square store is selected
+  useEffect(() => {
+    const fetchSquareData = async () => {
+      if (!user || !currentStore || currentStore.type !== 'square') return;
+      
+      setSquareLoading(true);
+      setSquareError(null);
+      
+      try {
+        const [inventory, orders] = await Promise.all([
+          squareService.getInventory(user.uid),
+          squareService.getOrders(user.uid)
+        ]);
+        
+        setSquareData({ inventory, orders });
+      } catch (error) {
+        console.error('Error fetching Square data:', error);
+        setSquareError(error as Error);
+      } finally {
+        setSquareLoading(false);
+      }
+    };
+
+    fetchSquareData();
+  }, [user, currentStore]);
+
   // Transform Shopify products to dashboard format
   const dashboardProducts = useMemo(() => {
     if (!products?.length) return [];
@@ -166,8 +199,35 @@ export const DashboardPage: React.FC = () => {
     }
   }, [products, orders]);
 
+  // Combine loading states
+  const isLoading = credentialsLoading || 
+    subscriptionLoading || 
+    (currentStore?.type === 'shopify' ? dataLoading : squareLoading);
+
+  // Combine error states
+  const error = currentStore?.type === 'shopify' ? dataError : squareError;
+
+  // Combine data based on current store type
+  const currentData = useMemo(() => {
+    if (!currentStore) return { products: [], orders: [] };
+    
+    return currentStore.type === 'shopify' 
+      ? { products, orders }
+      : { 
+          products: squareData.inventory.map(item => ({
+            id: item.id,
+            title: item.name,
+            sku: item.sku,
+            inventory_quantity: item.quantity,
+            price: item.price,
+            vendor: 'Square'
+          })),
+          orders: squareData.orders
+        };
+  }, [currentStore, products, orders, squareData]);
+
   // Loading states
-  const isLoading = dataLoading || subscriptionLoading;
+  // const isLoading = dataLoading || subscriptionLoading;
   
   // Show loading state
   if (isLoading) {
@@ -180,8 +240,8 @@ export const DashboardPage: React.FC = () => {
   }
 
   // Show error state
-  if (dataError) {
-    return <ErrorState error={dataError} onRetry={refetch} />;
+  if (error) {
+    return <ErrorState error={error} onRetry={refetch} />;
   }
 
   // Show subscription required state
@@ -228,27 +288,27 @@ export const DashboardPage: React.FC = () => {
         }}
       />
       
-      <MetricCards products={products || []} orders={orders || []} />
+      <MetricCards products={currentData.products} orders={currentData.orders} />
       
       <DashboardGrid 
-        products={dashboardProducts} 
-        orders={orders || []} 
+        products={currentStore.type === 'shopify' ? dashboardProducts : currentData.products} 
+        orders={currentData.orders} 
         transformedProducts={transformedProducts}
       />
 
-      <AIAssistantProvider products={dashboardProducts} orders={orders || []}>
+      <AIAssistantProvider products={currentStore.type === 'shopify' ? dashboardProducts : currentData.products} orders={currentData.orders}>
         <AIAssistantButton
           isOpen={isAssistantOpen}
           onClick={() => setIsAssistantOpen(!isAssistantOpen)}
-          products={dashboardProducts}
-          orders={orders || []}
+          products={currentStore.type === 'shopify' ? dashboardProducts : currentData.products}
+          orders={currentData.orders}
         />
         
         <AIAssistantPanel
           isOpen={isAssistantOpen}
           onClose={() => setIsAssistantOpen(false)}
-          products={dashboardProducts}
-          orders={orders || []}
+          products={currentStore.type === 'shopify' ? dashboardProducts : currentData.products}
+          orders={currentData.orders}
         />
       </AIAssistantProvider>
     </div>
