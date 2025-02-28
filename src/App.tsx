@@ -12,6 +12,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { AuthPage } from './pages/AuthPage';
 import { DashboardPage } from './pages/DashboardPage';
 import SettingsPage from './pages/SettingsPage';
+import SquareCallback from './pages/SquareCallback';
 import { PrivateRoute } from './components/routing/PrivateRoute';
 import { LoadingSpinner } from './components/shared/LoadingSpinner';
 import { ROUTES } from './constants/routes';
@@ -68,6 +69,9 @@ const AppRoutes: React.FC = () => {
 
         {/* Authentication page */}
         <Route path={ROUTES.AUTH} element={<AuthPage />} />
+        
+        {/* Square OAuth callback page */}
+        <Route path="/square-callback" element={<SquareCallback />} />
         
         {/* Protected dashboard route */}
         <Route 
