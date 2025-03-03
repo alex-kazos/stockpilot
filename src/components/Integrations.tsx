@@ -5,22 +5,22 @@ const platforms = [
     name: 'Shopify',
     logo: '/images/platforms/shopify.svg'
   },
-  // {
-  //   name: 'Shopify POS',
-  //   logo: '/images/platforms/shopify-pos.png'
-  // },
   {
-    name: 'BigCommerce',
-    logo: '/images/platforms/bigcommerce.svg'
+    name: 'Open AI',
+    logo: '/images/platforms/open-ai.png'
   },
+  // {
+  //   name: 'BigCommerce',
+  //   logo: '/images/platforms/bigcommerce.svg'
+  // },
   // {
   //   name: 'WooCommerce',
   //   logo: '/images/platforms/woocommerce.svg'
   // },
-  {
-    name: 'Square',
-    logo: '/images/platforms/square-logo-bold.svg'
-  }
+  // {
+  //   name: 'Square',
+  //   logo: '/images/platforms/square-logo-bold.svg'
+  // }
 ];
 
 export default function Integrations() {

@@ -97,6 +97,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           throw new Error('This domain is not authorized for Google sign-in');
         case 'auth/internal-error':
           throw new Error('Unable to connect to Google. Please try again later.');
+        case 'auth/user-disabled':
+          throw new Error('This account has been disabled. Please contact support for assistance.');
         default:
           throw new Error('Failed to sign in with Google');
       }

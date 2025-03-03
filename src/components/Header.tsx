@@ -64,18 +64,17 @@ export default function Header() {
                 >
                   Sneak Peek
                 </button>
-                <button 
-                  onClick={() => scrollToSection('pricing')}
+                <button
+                  onClick={() => scrollToSection('howitworks')}
                   className="text-gray-400 hover:text-white transition-colors duration-200"
                 >
-                  Pricing
+                  How It Works
                 </button>
                 <button
-                  // onClick={() => navigate(ROUTES.AUTH)}
-                  onClick={() => scrollToSection('pricing')}
+                  onClick={() => navigate(ROUTES.DASHBOARD)}
                   className="px-4 py-2 text-sm font-medium text-white bg-[#6366F1] rounded-lg hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#6366F1] transition-transform duration-200"
                 >
-                  Coming Soon
+                  Log In
                 </button>
               </nav>
             </div>
@@ -96,22 +95,21 @@ export default function Header() {
               </button>
               <button 
                 onClick={() => {
-                  scrollToSection('pricing');
+                  scrollToSection('howitworks');
                   setIsMenuOpen(false);
                 }}
                 className="text-gray-400 hover:text-white transition-colors duration-200 text-left px-4 py-2 hover:bg-gray-800/50 rounded-lg"
               >
-                Pricing
+                How It Works
               </button>
               <button 
                 onClick={() => {
-                  // navigate(ROUTES.AUTH);
-                  scrollToSection('pricing');
+                  navigate(ROUTES.DASHBOARD);
                   setIsMenuOpen(false);
                 }}
                 className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg hover:from-indigo-600 hover:to-purple-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
-                Coming Soon
+                Log In
               </button>
             </nav>
           </div>
@@ -137,18 +135,12 @@ export default function Header() {
                 <div className="flex items-center space-x-4">
                   <button
                     className="bg-[#6366F1] text-white px-8 py-3 rounded-lg text-lg font-medium hover:bg-indigo-600 transition-transform hover:scale-105"
-                    onClick={() => scrollToSection('pricing')}
+                    onClick={() => navigate(ROUTES.AUTH)}
                   >
-                    Coming Soon
+                    Sign Up
                   </button>
-                  {/*<button*/}
-                  {/*  className="px-8 py-3 rounded-lg text-lg font-medium border-2 border-[#6366F1] hover:border-indigo-600 transition-transform hover:scale-105"*/}
-                  {/*  onClick={() => scrollToSection('dashboard')}*/}
-                  {/*>*/}
-                  {/*  View Demo*/}
-                  {/*</button>*/}
                 </div>
-                <p className="text-gray-400 text-sm">Join the Waitlist</p>
+
               </div>
             </div>
 

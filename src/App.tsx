@@ -9,6 +9,7 @@ import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, CssBaseline } from '@mui/material';
 import { AuthProvider } from './contexts/AuthContext';
+import { APIKeysProvider } from './contexts/APIKeysContext';
 import { AuthPage } from './pages/AuthPage';
 import { DashboardPage } from './pages/DashboardPage';
 import SettingsPage from './pages/SettingsPage';
@@ -16,7 +17,6 @@ import { PrivateRoute } from './components/routing/PrivateRoute';
 import { LoadingSpinner } from './components/shared/LoadingSpinner';
 import { ROUTES } from './constants/routes';
 import { darkTheme } from './theme/darkTheme';
-import { SubscriptionCheck } from './components/subscription/SubscriptionCheck';
 import { MainPage } from './pages/MainPage'; // Make sure this import exists
 import Header from './components/Header';
 import Stats from './components/Stats';
@@ -56,11 +56,11 @@ const AppRoutes: React.FC = () => {
             {/* Content */}
             <div className="relative space-y-8">
               <Header />
-              <Integrations />
               <Dashboard />
               <SocialProof />
               <HowItWorks />
-              <Pricing />
+              {/*<Pricing />*/}
+              <Integrations />
               <Footer />
             </div>
           </main>
@@ -74,9 +74,7 @@ const AppRoutes: React.FC = () => {
           path={ROUTES.DASHBOARD} 
           element={
             <PrivateRoute>
-              <SubscriptionCheck>
                 <DashboardPage />
-              </SubscriptionCheck>
             </PrivateRoute>
           } 
         />
@@ -86,9 +84,7 @@ const AppRoutes: React.FC = () => {
           path={ROUTES.SETTINGS} 
           element={
             <PrivateRoute>
-              <SubscriptionCheck>
                 <SettingsPage />
-              </SubscriptionCheck>
             </PrivateRoute>
           } 
         />
@@ -103,16 +99,19 @@ const AppRoutes: React.FC = () => {
  * Wraps the entire application with necessary providers:
  * - Router: For client-side routing
  * - AuthProvider: For authentication state management
+ * - APIKeysProvider: For managing API keys including OpenAI
  * - ThemeProvider: For Material UI theme management
  */
 const App: React.FC = () => {
   return (
     <Router>
       <AuthProvider>
-        <ThemeProvider theme={darkTheme}>
-          <CssBaseline />
-          <AppRoutes />
-        </ThemeProvider>
+        <APIKeysProvider>
+          <ThemeProvider theme={darkTheme}>
+            <CssBaseline />
+            <AppRoutes />
+          </ThemeProvider>
+        </APIKeysProvider>
       </AuthProvider>
     </Router>
   );

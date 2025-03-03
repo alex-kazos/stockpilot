@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { DashboardProduct, DashboardOrder } from '../types/dashboard';
 import { logger } from '../utils/logger';
+import { useAPIKeys } from './APIKeysContext';
 
 interface Message {
   role: 'user' | 'assistant' | 'system';
@@ -14,6 +15,7 @@ interface AIAssistantContextType {
   sendMessage: (content: string) => Promise<void>;
   clearMessages: () => void;
   startNewChat: () => void;
+  hasValidApiKey: boolean;
 }
 
 const AIAssistantContext = createContext<AIAssistantContextType | undefined>(undefined);
@@ -29,6 +31,8 @@ export const AIAssistantProvider: React.FC<AIAssistantProviderProps> = ({
   products,
   orders
 }) => {
+  const { openaiApiKey } = useAPIKeys();
+
   const initialSystemMessage = {
     role: 'system' as const,
     content: 'You are a stock and sales expert who, based on product data, can make various suggestions and inform the business owner about their stock, products, and future sales. Keep your answers short and focused on actionable insights.'
@@ -38,6 +42,9 @@ export const AIAssistantProvider: React.FC<AIAssistantProviderProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Check if we have a valid API key
+  const hasValidApiKey = !!openaiApiKey;
+
   const startNewChat = useCallback(() => {
     setMessages([initialSystemMessage]);
     setError(null);
@@ -45,6 +52,12 @@ export const AIAssistantProvider: React.FC<AIAssistantProviderProps> = ({
 
   const sendMessage = useCallback(async (content: string) => {
     try {
+      // If no API key, don't attempt to send a message
+      if (!openaiApiKey) {
+        setError("No OpenAI API key provided. Please add your key in Settings.");
+        return;
+      }
+
       setIsLoading(true);
       setError(null);
 
@@ -120,7 +133,7 @@ Please analyze this data to provide insights and recommendations about inventory
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
+          'Authorization': `Bearer ${openaiApiKey}`,
         },
         body: JSON.stringify({
           model: 'gpt-4o-2024-08-06',
@@ -153,7 +166,7 @@ Please analyze this data to provide insights and recommendations about inventory
     } finally {
       setIsLoading(false);
     }
-  }, [products, orders, messages]);
+  }, [products, orders, messages, openaiApiKey]);
 
   const clearMessages = useCallback(() => {
     setMessages([initialSystemMessage]);
@@ -168,7 +181,8 @@ Please analyze this data to provide insights and recommendations about inventory
         error, 
         sendMessage,
         clearMessages,
-        startNewChat
+        startNewChat,
+        hasValidApiKey
       }}
     >
       {children}

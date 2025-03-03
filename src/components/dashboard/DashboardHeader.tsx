@@ -49,11 +49,13 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
       {/*</div>*/}
 
       <div className="flex items-center gap-2 sm:gap-4">
-        <StoreSelector
-          currentStore={currentStore}
-          stores={stores}
-          onStoreChange={onStoreChange}
-        />
+        <Store className="w-5 h-5 text-indigo-400" />
+        <span className="text-white">{currentStore.name}</span>
+        {/*<StoreSelector*/}
+        {/*  currentStore={currentStore}*/}
+        {/*  stores={stores}*/}
+        {/*  onStoreChange={onStoreChange}*/}
+        {/*/>*/}
       </div>
       <div className="flex items-center gap-2 sm:gap-4">
         <button

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, collection, addDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { ArrowRight, Store, Youtube, CheckCircle } from 'lucide-react';
 
@@ -27,17 +27,27 @@ export function ShopifySetup({ onClose }: { onClose: () => void }) {
       console.log('Starting Shopify store connection...');
       console.log('Current user ID:', user.uid);
       
-      // Store Shopify credentials in Firebase
-      const docRef = doc(db, 'shopify_credentials', user.uid);
-      const data = {
-        shopUrl: shopUrl.includes('.myshopify.com') ? shopUrl : `${shopUrl}.myshopify.com`,
+      // Format shop URL
+      const formattedShopUrl = shopUrl.includes('.myshopify.com') ? shopUrl : `${shopUrl}.myshopify.com`;
+      
+      // Generate storeId from shopUrl
+      const storeId = formattedShopUrl.replace(/^https?:\/\//, '').replace(/\.myshopify\.com\/?$/, '');
+      
+      // Store Shopify credentials in Firebase using the multi-store structure
+      // Store goes into users/{userId}/stores/{storeId}
+      const storeData = {
+        shopUrl: formattedShopUrl,
         apiToken,
         userId: user.uid,
+        storeId,
+        isActive: true, // Make this the active store
         createdAt: new Date().toISOString()
       };
       
       console.log('Attempting to write to Firestore...');
-      await setDoc(docRef, data);
+      // Write to the stores subcollection
+      const storeDocRef = doc(db, `users/${user.uid}/stores`, storeId);
+      await setDoc(storeDocRef, storeData);
       console.log('Successfully wrote to Firestore');
 
       // Test the connection
@@ -45,10 +55,11 @@ export function ShopifySetup({ onClose }: { onClose: () => void }) {
       const response = await fetch('/api/shopify/products', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${apiToken}`,
-          'x-shop-domain': data.shopUrl,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'x-shopify-access-token': apiToken,
+          'x-shop-domain': formattedShopUrl,
+          'x-user-id': user.uid,
+          'content-type': 'application/json',
+          'accept': 'application/json'
         },
         credentials: 'include'
       });
@@ -61,6 +72,8 @@ export function ShopifySetup({ onClose }: { onClose: () => void }) {
       setShowSuccess(true);
       setTimeout(() => {
         onClose();
+        // Reload the page to ensure dashboard appears with the new store data
+        window.location.href = '/dashboard';
       }, 2000);
     } catch (err) {
       console.error('Error during setup:', err);

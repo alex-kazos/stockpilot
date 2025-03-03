@@ -5,6 +5,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { Store } from 'lucide-react';
 import { ProfileSettings } from '../components/settings/ProfileSettings';
 import { EmailSettings } from '../components/settings/EmailSettings';
+import { OpenAISettings } from '../components/settings/OpenAISettings';
 import { SubscriptionSettings } from '../components/settings/SubscriptionSettings';
 import { ROUTES } from '../constants/routes';
 import LogoutButton from '../components/LogoutButton';
@@ -42,7 +43,7 @@ const SettingsPage: React.FC = () => {
         <div className="space-y-4 sm:space-y-6">
           <ProfileSettings />
           <EmailSettings />
-          <SubscriptionSettings />
+          <OpenAISettings />
         </div>
       </Container>
     </div>

@@ -1,10 +1,5 @@
 import { logger } from './logger';
 
-const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-if (!apiKey) {
-  throw new Error('Missing VITE_OPENAI_API_KEY environment variable');
-}
-
 interface Product {
   id: string;
   name: string;
@@ -31,7 +26,15 @@ interface RecommendationResponse {
   recommendations: Recommendation[];
 }
 
-export const generateRecommendations = async (products: Product[]): Promise<RecommendationResponse> => {
+export const generateRecommendations = async (products: Product[], apiKey?: string): Promise<RecommendationResponse> => {
+  // If no API key is provided, return an empty response
+  if (!apiKey) {
+    logger.warning('OpenAI', 'No API key provided for OpenAI', {
+      fileName: 'openai.ts'
+    });
+    return { recommendations: [] };
+  }
+
   // Process products to ensure SKU is available
   const processedProducts = products.map(product => ({
     ...product,
