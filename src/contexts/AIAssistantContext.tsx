@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 import { DashboardProduct, DashboardOrder } from '../types/dashboard';
 import { logger } from '../utils/logger';
 import { useAPIKeys } from './APIKeysContext';
+import { analyzeQuery, filterProductsByQueryContext, generateContextDescription } from '../utils/queryAnalyzer';
 
 interface Message {
   role: 'user' | 'assistant' | 'system';
@@ -35,7 +36,7 @@ export const AIAssistantProvider: React.FC<AIAssistantProviderProps> = ({
 
   const initialSystemMessage = {
     role: 'system' as const,
-    content: 'You are a stock and sales expert who, based on product data, can make various suggestions and inform the business owner about their stock, products, and future sales. Keep your answers short and focused on actionable insights.'
+    content: 'You are a helpful stock and sales assistant who provides information about inventory and sales data. Only share information that is directly related to what the user is asking about. Never provide recommendations or insights unless specifically requested. Respond based on the specific data provided in each context message and only answer the exact question asked by the user. Keep your answers short and focused.'
   };
 
   const [messages, setMessages] = useState<Message[]>([initialSystemMessage]);
@@ -49,6 +50,16 @@ export const AIAssistantProvider: React.FC<AIAssistantProviderProps> = ({
     setMessages([initialSystemMessage]);
     setError(null);
   }, []);
+
+  // Helper function to calculate average order value
+  const calculateAverageOrderValue = (filterOrders: DashboardOrder[]): string => {
+    if (filterOrders.length === 0) return '0.00';
+
+    const totalValue = filterOrders.reduce((sum, order) => 
+      sum + (order.total_price ? parseFloat(order.total_price) : 0), 0);
+      
+    return (totalValue / filterOrders.length).toFixed(2);
+  };
 
   const sendMessage = useCallback(async (content: string) => {
     try {
@@ -65,7 +76,10 @@ export const AIAssistantProvider: React.FC<AIAssistantProviderProps> = ({
       const userMessage: Message = { role: 'user', content };
       setMessages(prev => [...prev, userMessage]);
 
-      // Calculate some basic analytics for context
+      // Analyze query to understand what data is needed
+      const queryContext = analyzeQuery(content);
+      
+      // Get recent orders (last 30 days)
       const last30Days = new Date();
       last30Days.setDate(last30Days.getDate() - 30);
       
@@ -73,60 +87,74 @@ export const AIAssistantProvider: React.FC<AIAssistantProviderProps> = ({
         new Date(order.created_at) >= last30Days
       );
 
-      const productSalesMap = new Map<string, number>();
-      const productRevenueMap = new Map<string, number>();
+      // Filter products based on the query context
+      const relevantProducts = filterProductsByQueryContext(
+        products, 
+        orders, // Use all orders, not just recent ones, for product metrics
+        queryContext
+      );
+      
+      // Generate context description with only the relevant products
+      const contextDescription = generateContextDescription(queryContext, relevantProducts);
 
-      recentOrders.forEach(order => {
-        order.line_items?.forEach(item => {
-          const currentSales = productSalesMap.get(item.product_id?.toString() || '') || 0;
-          const currentRevenue = productRevenueMap.get(item.product_id?.toString() || '') || 0;
-          
-          productSalesMap.set(
-            item.product_id?.toString() || '', 
-            currentSales + (item.quantity || 0)
-          );
-          productRevenueMap.set(
-            item.product_id?.toString() || '', 
-            currentRevenue + ((parseFloat(item.price) || 0) * (item.quantity || 0))
-          );
+      // Create a map of order items to make lookup easier
+      const orderItemsMap = new Map<string, { products: string[], totalValue: number }>();
+      
+      orders.forEach(order => {
+        const productIds = order.line_items?.map(item => item.product_id?.toString() || '') || [];
+        const totalValue = order.total_price ? parseFloat(order.total_price) : 0;
+        
+        orderItemsMap.set(order.id.toString(), {
+          products: productIds.filter(Boolean),
+          totalValue
         });
       });
 
-      // Prepare the context for the AI
+      // Prepare the context for the AI with detailed order information
       const contextMessage = {
-        role: 'system',
-        content: `Current inventory and sales data:
-
-Product Inventory:
-${products.map(p => {
-  const sales = productSalesMap.get(p.id) || 0;
-  const revenue = productRevenueMap.get(p.id) || 0;
-  return `- ${p.name}:
-  • Current stock: ${p.stock} units
-  • SKU: ${p.sku}
-  • Product type: ${p.product_type}
-  • 30-day sales: ${sales} units
-  • 30-day revenue: $${revenue.toFixed(2)}
-  • Price: $${p.price}
-  • Stock status: ${p.stock < 10 ? 'LOW STOCK' : p.stock > 50 ? 'WELL STOCKED' : 'MODERATE'}`
-}).join('\n')}
+        role: 'system' as const,
+        content: `${contextDescription}
 
 Recent Order Activity (Last 30 Days):
 • Total orders: ${recentOrders.length}
-• Average order value: $${recentOrders.length > 0 
-  ? (recentOrders.reduce((sum, order) => 
-      sum + (order.total_price ? parseFloat(order.total_price) : 0), 0) / recentOrders.length).toFixed(2)
-  : '0.00'}
-• Most recent orders:
-${orders.slice(0, 5).map(o => 
-  `  - Order ${o.order_number} (${new Date(o.created_at).toLocaleDateString()}):
-    • Items: ${o.line_items?.length || 0}
-    • Total: $${o.total_price || '0.00'}
-    • Status: ${o.financial_status || 'unknown'}`
-).join('\n')}
+• Average order value: $${calculateAverageOrderValue(recentOrders)}
 
-Please analyze this data to provide insights and recommendations about inventory management, sales trends, and potential opportunities.`
+Detailed Order Information:
+${orders.slice(0, 10).map(o => {
+  const orderItems = orderItemsMap.get(o.id.toString());
+  const productNames = orderItems?.products.map(pid => {
+    const product = products.find(p => p.id === pid);
+    return product ? product.name : 'Unknown Product';
+  }).join(', ');
+  
+  return `- Order ${o.order_number || o.id} (${new Date(o.created_at).toLocaleDateString()}):
+    • Items: ${o.line_items?.length || 0}
+    • Products: ${productNames || 'No products'}
+    • Total: $${o.total_price || '0.00'}
+    • Status: ${o.financial_status || 'unknown'}`;
+}).join('\n')}
+
+Order-Product Relationships:
+${relevantProducts.slice(0, 10).map(product => {
+  const productOrders = orders
+    .filter(order => order.line_items?.some(item => item.product_id?.toString() === product.id))
+    .slice(0, 5);
+  
+  return `- ${product.name} (${product.sku}):
+    • Total orders: ${productOrders.length}
+    • Recent orders: ${productOrders.map(o => o.order_number || o.id).join(', ')}`;
+}).join('\n')}
+
+REMEMBER: Only answer the user's specific question. Do not provide recommendations or insights unless explicitly asked. Do not summarize this data unless requested.`
       };
+
+      // Log what we're sending to the API for debugging
+      logger.debug('AIAssistant', 'Sending context to AI', {
+        fileName: 'AIAssistantContext.tsx',
+        queryType: queryContext.type,
+        productCount: relevantProducts.length,
+        contextLength: contextMessage.content.length
+      });
 
       // Make the API request
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -144,7 +172,8 @@ Please analyze this data to provide insights and recommendations about inventory
       });
 
       if (!response.ok) {
-        throw new Error('Failed to get response from AI');
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Failed to get response from AI');
       }
 
       const data = await response.json();
