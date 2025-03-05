@@ -27,7 +27,7 @@ export default function HowItWorks() {
   ];
 
   return (
-    <section className="py-8 relative">
+    <section id="how-it-works" className="py-8 relative">
       <div className="container mx-auto px-4 relative">
         <div className="text-center mb-20">
           <h2 className="text-4xl font-bold text-white mb-4">

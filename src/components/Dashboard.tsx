@@ -241,6 +241,7 @@ export default function Dashboard() {
                 </button>
               </div>
             )}
+            <p className="text-gray-400 text-sm mt-4 ml-2">Available with OpenAI key</p>
           </div>
 
           {/* AI Assistant */}

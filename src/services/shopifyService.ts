@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { ShopifyProduct, ShopifyOrder, ShopifyCustomer } from '../types/shopify';
 import { getAuth } from 'firebase/auth';
 import { logger } from '../utils/logger';
@@ -9,6 +9,8 @@ interface ShopifyCredentials {
   shopUrl: string;
   userId: string;
   createdAt: string;
+  storeId: string;
+  isActive: boolean;
 }
 
 interface ShopifyResponse<T> {
@@ -50,6 +52,17 @@ class ShopifyService {
     return ShopifyService.instance;
   }
 
+  /**
+   * Invalidates the cached credentials, forcing a refresh on the next API call.
+   * This should be called whenever the user switches active stores.
+   */
+  public invalidateCache(): void {
+    logger.debug('ShopifyService', 'Invalidating credentials cache', {
+      fileName: this.fileName
+    });
+    this.credentials = null;
+  }
+
   private async getCredentials(): Promise<ShopifyCredentials> {
     if (this.credentials) {
       logger.debug('ShopifyService', 'Using cached credentials', {
@@ -73,42 +86,50 @@ class ShopifyService {
     });
 
     const db = getFirestore();
-    const credentialsDoc = await getDoc(doc(db, 'shopify_credentials', user.uid));
     
-    if (!credentialsDoc.exists()) {
-      logger.error('ShopifyService', 'Shopify credentials not found', {
+    // Get active store from the stores subcollection
+    try {
+      const storesRef = collection(db, 'users', user.uid, 'stores');
+      const activeStoreQuery = query(storesRef, where('isActive', '==', true), limit(1));
+      const activeStoreSnapshot = await getDocs(activeStoreQuery);
+      
+      if (!activeStoreSnapshot.empty) {
+        const storeDoc = activeStoreSnapshot.docs[0];
+        const storeData = storeDoc.data() as ShopifyCredentials;
+        
+        if (storeData.apiToken && storeData.shopUrl) {
+          storeData.shopUrl = storeData.shopUrl.replace(/^https?:\/\//, '');
+          storeData.storeId = storeDoc.id;
+          
+          this.credentials = storeData;
+          
+          logger.success('ShopifyService', 'Successfully loaded active Shopify store credentials', {
+            fileName: this.fileName,
+            userId: user.uid,
+            shopUrl: storeData.shopUrl,
+            storeId: storeData.storeId
+          });
+          
+          return storeData;
+        }
+      }
+      
+      // If no active store is found
+      logger.error('ShopifyService', 'No active Shopify store found', {
         fileName: this.fileName,
         userId: user.uid
       });
-      throw new Error('Shopify credentials not found in Firebase');
-    }
-
-    const data = credentialsDoc.data() as ShopifyCredentials;
-    
-    if (!data.apiToken || !data.shopUrl) {
-      logger.error('ShopifyService', 'Invalid Shopify credentials', {
+      throw new Error('No active Shopify store found');
+    } catch (error) {
+      logger.error('ShopifyService', 'Error fetching Shopify credentials', {
         fileName: this.fileName,
-        userId: user.uid,
-        hasToken: !!data.apiToken,
-        hasShopUrl: !!data.shopUrl
+        error: (error as Error).message
       });
-      throw new Error('Invalid Shopify credentials');
+      throw new Error('Failed to fetch Shopify credentials: ' + (error as Error).message);
     }
-
-    data.shopUrl = data.shopUrl.replace(/^https?:\/\//, '');
-    
-    this.credentials = data;
-
-    logger.success('ShopifyService', 'Successfully loaded Shopify credentials', {
-      fileName: this.fileName,
-      userId: user.uid,
-      shopUrl: data.shopUrl
-    });
-
-    return data;
   }
 
-  private createShopifyClient(token: string, shopUrl: string) {
+  private createShopifyClient(token: string, shopUrl: string, storeId?: string) {
     const auth = getAuth();
     const userId = auth.currentUser?.uid;
     
@@ -118,17 +139,26 @@ class ShopifyService {
 
     logger.debug('ShopifyService', 'Creating Shopify client', {
       fileName: this.fileName,
-      userId
+      userId,
+      storeId: storeId || 'legacy'
     });
+    
+    const headers: Record<string, string> = {
+      'content-type': 'application/json',
+      'accept': 'application/json',
+      'x-shopify-access-token': token,
+      'x-user-id': userId,
+      'x-shop-domain': shopUrl
+    };
+    
+    // Add storeId header if available
+    if (storeId) {
+      headers['x-store-id'] = storeId;
+    }
     
     return axios.create({
       baseURL: '/api/shopify',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-Shopify-Access-Token': token,
-        'X-User-ID': userId
-      },
+      headers,
       timeout: 30000,
       validateStatus: (status) => {
         return status >= 200 && status < 300 && status !== 303;
@@ -261,8 +291,8 @@ class ShopifyService {
         params
       });
 
-      const { apiToken, shopUrl } = await this.getCredentials();
-      const client = this.createShopifyClient(apiToken, shopUrl);
+      const { apiToken, shopUrl, storeId } = await this.getCredentials();
+      const client = this.createShopifyClient(apiToken, shopUrl, storeId);
 
       // Get all pages of products using the admin API endpoint
       const allProducts = await this.getAllPages<ShopifyProduct>(
@@ -297,8 +327,8 @@ class ShopifyService {
         params
       });
 
-      const { apiToken, shopUrl } = await this.getCredentials();
-      const client = this.createShopifyClient(apiToken, shopUrl);
+      const { apiToken, shopUrl, storeId } = await this.getCredentials();
+      const client = this.createShopifyClient(apiToken, shopUrl, storeId);
 
       // Get all pages of orders using the admin API endpoint
       const allOrders = await this.getAllPages<ShopifyOrder>(
@@ -329,8 +359,8 @@ class ShopifyService {
   async getCustomers(params: QueryParams = {}): Promise<ShopifyCustomer[]> {
     try {
       logger.info('ShopifyService', 'Starting customers fetch', { fileName: this.fileName });
-      const { apiToken, shopUrl } = await this.getCredentials();
-      const client = this.createShopifyClient(apiToken, shopUrl);
+      const { apiToken, shopUrl, storeId } = await this.getCredentials();
+      const client = this.createShopifyClient(apiToken, shopUrl, storeId);
 
       // Get all pages of customers using the admin API endpoint
       const allCustomers = await this.getAllPages<ShopifyCustomer>(
@@ -358,6 +388,25 @@ class ShopifyService {
       });
       throw new Error(`Shopify API Error: ${axiosError.message}`);
     }
+  }
+
+  /**
+   * Tests the connection to a specific Shopify store without affecting the current active connection.
+   * @param apiToken The Shopify API token
+   * @param shopUrl The Shopify store URL
+   * @param storeId Optional store ID for multi-store setups
+   * @returns A promise that resolves when the connection is successful, or rejects with an error
+   */
+  async testStoreConnection(apiToken: string, shopUrl: string, storeId?: string): Promise<void> {
+    logger.debug('ShopifyService', 'Testing connection to specific store', {
+      fileName: this.fileName,
+      shopUrl,
+      storeId: storeId || 'temporary'
+    });
+    
+    shopUrl = shopUrl.replace(/^https?:\/\//, '');
+    const client = this.createShopifyClient(apiToken, shopUrl, storeId);
+    return this.testConnection(client);
   }
 }
 

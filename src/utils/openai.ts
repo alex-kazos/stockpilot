@@ -1,9 +1,6 @@
 import { logger } from './logger';
-
-const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-if (!apiKey) {
-  throw new Error('Missing VITE_OPENAI_API_KEY environment variable');
-}
+import { filterProductsByQueryContext } from './queryAnalyzer';
+import { QueryContext } from './queryAnalyzer';
 
 interface Product {
   id: string;
@@ -31,17 +28,80 @@ interface RecommendationResponse {
   recommendations: Recommendation[];
 }
 
-export const generateRecommendations = async (products: Product[]): Promise<RecommendationResponse> => {
+export const generateRecommendations = async (products: Product[], apiKey?: string): Promise<RecommendationResponse> => {
+  // If no API key is provided, return an empty response
+  if (!apiKey) {
+    logger.warning('OpenAI', 'No API key provided for OpenAI', {
+      fileName: 'openai.ts'
+    });
+    return { recommendations: [] };
+  }
+
   // Process products to ensure SKU is available
   const processedProducts = products.map(product => ({
     ...product,
     sku: product.sku || product.variants?.[0]?.sku || 'N/A'
   }));
 
+  // Filter products to only include those that need attention
+  // This prevents sending the entire inventory to the API
+  
+  // First, get low stock items (most critical)
+  const lowStockContext: QueryContext = { 
+    type: 'LOW_STOCK',
+    limit: 7 // Only include top 7 low stock items 
+  };
+  const lowStockProducts = filterProductsByQueryContext(processedProducts, [], lowStockContext);
+  
+  // Then, get best selling items
+  const bestSellingContext: QueryContext = { 
+    type: 'BEST_SELLING',
+    limit: 7 // Only include top 7 best selling items
+  };
+  const bestSellingProducts = filterProductsByQueryContext(processedProducts, [], bestSellingContext);
+  
+  // Finally, get overstocked items
+  const overstockedContext: QueryContext = { 
+    type: 'OVERSTOCKED',
+    limit: 6 // Only include top 6 overstocked items
+  };
+  const overstockedProducts = filterProductsByQueryContext(processedProducts, [], overstockedContext);
+  
+  // Combine the filtered products, removing duplicates
+  const combinedProducts: Product[] = [];
+  const addedIds = new Set<string>();
+  
+  // Helper to add products without duplicates
+  const addProductsToList = (productsList: Product[]) => {
+    productsList.forEach(product => {
+      if (!addedIds.has(product.id)) {
+        combinedProducts.push(product);
+        addedIds.add(product.id);
+      }
+    });
+  };
+  
+  // Add products in order of importance
+  addProductsToList(lowStockProducts);       // Critical needs first
+  addProductsToList(bestSellingProducts);    // Then popular items
+  addProductsToList(overstockedProducts);    // Then overstocked items
+  
+  // Cap at 20 products total to avoid token limit issues
+  const reducedProducts = combinedProducts.slice(0, 20);
+  
+  logger.debug('OpenAI', 'Preparing recommendations with filtered products', {
+    fileName: 'openai.ts',
+    totalProducts: products.length,
+    filteredProducts: reducedProducts.length,
+    lowStockCount: lowStockProducts.length,
+    bestSellingCount: bestSellingProducts.length,
+    overstockedCount: overstockedProducts.length
+  });
+
   const prompt = `Analyze the following product data and provide inventory management recommendations. For each recommendation, specify a priority (HIGH, MEDIUM, LOW) and type (RESTOCK, WARNING, OPPORTUNITY). Also include a prediction field with potential financial impact.
 
 Product Data:
-${processedProducts.map(p => `- ${p.name} (${p.product_type}): ${p.stock} in stock, ${p.sales} sales, SKU: ${p.sku}`).join('\n')}
+${reducedProducts.map(p => `- ${p.name} (${p.product_type}): ${p.stock} in stock, ${p.sales} sales, SKU: ${p.sku}`).join('\n')}
 
 Provide recommendations in the following JSON format:
 {

@@ -7,12 +7,12 @@ interface StoreSelectorProps {
   currentStore: {
     id: string;
     name: string;
-    type: 'shopify' | 'square';
+    type: 'shopify';
   };
   stores: Array<{
     id: string;
     name: string;
-    type: 'shopify' | 'square';
+    type: 'shopify';
   }>;
   onStoreChange: (storeId: string) => void;
 }
@@ -60,13 +60,6 @@ export const StoreSelector: React.FC<StoreSelectorProps> = ({
             >
               <Plus className="w-4 h-4 text-indigo-400" />
               <span className="text-white">Add Shopify Store</span>
-            </button>
-            <button
-              onClick={() => setShowSquareSetup(true)}
-              className="w-full px-4 py-2 text-left hover:bg-[#2D2B3B] transition-colors flex items-center space-x-2"
-            >
-              <Plus className="w-4 h-4 text-purple-400" />
-              <span className="text-white">Add Square Store</span>
             </button>
           </div>
         </div>

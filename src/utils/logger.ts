@@ -143,7 +143,7 @@ class Logger {
     try {
       const sanitizedBatch = this.sanitizeData(batch);
       const logsCollection = collection(db, 'logBatches');
-      await addDoc(logsCollection, sanitizedBatch);
+      // await addDoc(logsCollection, sanitizedBatch);
     } catch (error) {
       console.error('Failed to save log batch to Firebase:', error);
     }

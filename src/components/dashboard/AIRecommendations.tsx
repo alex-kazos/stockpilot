@@ -1,7 +1,10 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { TrendingUp, AlertTriangle, DollarSign, Loader } from 'lucide-react';
+import { TrendingUp, AlertTriangle, DollarSign, Loader, Settings } from 'lucide-react';
 import { logger } from '../../utils/logger';
 import { generateRecommendations, type Product, type Recommendation } from '../../utils/openai';
+import { useAPIKeys } from '../../contexts/APIKeysContext';
+import { Link } from 'react-router-dom';
+import { ROUTES } from '../../constants/routes';
 
 interface RecommendationResponse {
   recommendations: Recommendation[];
@@ -38,6 +41,7 @@ const getTypeIcon = (type: string) => {
 };
 
 export const AIRecommendations: React.FC<AIRecommendationsProps> = ({ products }) => {
+  const { openaiApiKey } = useAPIKeys();
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [loading, setLoading] = useState(false);
@@ -60,6 +64,14 @@ export const AIRecommendations: React.FC<AIRecommendationsProps> = ({ products }
 
   useEffect(() => {
     const fetchRecommendations = async () => {
+      // Don't attempt to fetch if there's no API key
+      if (!openaiApiKey) {
+        logger.info('AIRecommendations', 'No OpenAI API key provided', {
+          fileName: 'AIRecommendations.tsx'
+        });
+        return;
+      }
+
       // Check session storage first
       const storedRecommendations = sessionStorage.getItem('aiRecommendations');
       if (storedRecommendations) {
@@ -102,7 +114,7 @@ export const AIRecommendations: React.FC<AIRecommendationsProps> = ({ products }
           }))
         });
 
-        const data = await generateRecommendations(products);
+        const data = await generateRecommendations(products, openaiApiKey);
 
         logger.success('AIRecommendations', 'Successfully fetched recommendations', {
           fileName: 'AIRecommendations.tsx',
@@ -132,7 +144,63 @@ export const AIRecommendations: React.FC<AIRecommendationsProps> = ({ products }
     };
 
     fetchRecommendations();
-  }, [products]);
+  }, [products, openaiApiKey]);
+
+  if (!openaiApiKey) {
+    return (
+      <div className="relative min-h-[300px] rounded-lg">
+        {/* Blurred overlay content - positioned relative to its container only */}
+        <div className="absolute inset-0 backdrop-blur-sm bg-black/30 z-0 rounded-lg flex flex-col items-center justify-center overflow-hidden">
+          <Settings className="w-8 h-8 text-gray-400 mb-3" />
+          <p className="text-white text-lg font-medium mb-2">OpenAI API Key Required</p>
+          <p className="text-gray-300 text-sm mb-4 text-center px-6">
+            Add your OpenAI API key in Settings to access AI-powered recommendations
+          </p>
+          <Link 
+            to={ROUTES.SETTINGS} 
+            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+          >
+            Go to Settings
+          </Link>
+        </div>
+        
+        {/* Original content (blurred) */}
+        <div className="opacity-20">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold text-white">AI Recommendations</h2>
+            <div className="flex items-center gap-2">
+              <select
+                className="bg-[#1C1B23] text-gray-300 border border-gray-800 rounded-lg px-3 py-1.5 text-sm"
+                disabled
+              >
+                <option>All</option>
+              </select>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            {[1, 2, 3].map((_, index) => (
+              <div
+                key={index}
+                className="bg-[#1C1B23] rounded-lg p-6 border-2 border-gray-800"
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-500/10">
+                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                    </span>
+                  </div>
+                </div>
+                <p className="text-gray-400 mb-2 w-3/4 h-4 bg-gray-700/30 rounded"></p>
+                <p className="text-gray-400 mb-2 w-full h-4 bg-gray-700/30 rounded"></p>
+                <p className="text-gray-400 mb-2 w-2/3 h-4 bg-gray-700/30 rounded"></p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

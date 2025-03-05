@@ -132,6 +132,7 @@ export default function ChatAssistant() {
           </div>
         </div>
       </div>
+      <p className="text-gray-400 text-sm mt-4 ml-2 flex items-center">Available with OpenAI key</p>
     </div>
   );
 }

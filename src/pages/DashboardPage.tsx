@@ -31,12 +31,14 @@ interface Store {
   id: string;
   name: string;
   type: 'shopify' | 'square';
+  isActive?: boolean;
 }
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
   const { credentials, loading: credentialsLoading } = useShopifyCredentials();
   const [stores, setStores] = useState<Store[]>([]);
+  const [storesLoaded, setStoresLoaded] = useState(false);
   const [currentStore, setCurrentStore] = useState<Store | null>(null);
   const [subscription, setSubscription] = useState(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
@@ -54,17 +56,17 @@ export const DashboardPage: React.FC = () => {
     fetchOrders: currentStore?.type === 'shopify'
   });
 
-  // Check subscription status
-  useEffect(() => {
-    const checkSubscription = async () => {
-      if (user?.email) {
-        const sub = await subscriptionService.getUserSubscription(user.email);
-        setSubscription(sub);
-      }
-      setSubscriptionLoading(false);
-    };
-    checkSubscription();
-  }, [user]);
+  // // Check subscription status
+  // useEffect(() => {
+  //   const checkSubscription = async () => {
+  //     if (user?.email) {
+  //       const sub = await subscriptionService.getUserSubscription(user.email);
+  //       setSubscription(sub);
+  //     }
+  //     setSubscriptionLoading(false);
+  //   };
+  //   checkSubscription();
+  // }, [user]);
 
   // Fetch all stores for the current user
   useEffect(() => {
@@ -72,29 +74,21 @@ export const DashboardPage: React.FC = () => {
       if (!user) return;
 
       try {
-        // Fetch Shopify stores
-        const shopifyQuery = query(
-          collection(db, 'shopify_credentials'),
-          where('userId', '==', user.uid)
-        );
-        const shopifyDocs = await getDocs(shopifyQuery);
-        const shopifyStores = shopifyDocs.docs.map(doc => ({
-          id: doc.id,
-          name: doc.data().shopUrl,
-          type: 'shopify' as const
-        }));
+        // Fetch Shopify stores from users/{userId}/stores collection
+        const shopifyStoresRef = collection(db, 'users', user.uid, 'stores');
+        const shopifyStoresDocs = await getDocs(shopifyStoresRef);
+        const shopifyStores = shopifyStoresDocs.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            name: data.shopUrl,
+            type: 'shopify' as const,
+            isActive: data.isActive
+          };
+        });
 
-        // Fetch Square stores
-        const squareQuery = query(
-          collection(db, 'square_credentials'),
-          where('userId', '==', user.uid)
-        );
-        const squareDocs = await getDocs(squareQuery);
-        const squareStores = squareDocs.docs.map(doc => ({
-          id: doc.id,
-          name: `Square Store ${doc.data().locationId}`,
-          type: 'square' as const
-        }));
+        // Fetch Square stores (if we had them in the future)
+        const squareStores: Store[] = []; // placeholder for future implementation
 
         const allStores = [...shopifyStores, ...squareStores];
         setStores(allStores);
@@ -105,11 +99,28 @@ export const DashboardPage: React.FC = () => {
         }
       } catch (error) {
         logger.error('DashboardPage', 'Error fetching stores', { error });
+      } finally {
+        setStoresLoaded(true);
       }
     };
 
     fetchStores();
   }, [user]);
+
+  // Set the current store when stores are loaded
+  useEffect(() => {
+    if (stores.length > 0) {
+      // Find active store or use the first one
+      const activeStore = stores.find(store => store.isActive) || stores[0];
+      setCurrentStore(activeStore);
+      
+      logger.info('DashboardPage', 'Set current store', {
+        storeId: activeStore.id,
+        storeName: activeStore.name,
+        isActive: activeStore.isActive
+      });
+    }
+  }, [stores]);
 
   // Transform Shopify products to dashboard format
   const dashboardProducts = useMemo(() => {
@@ -167,15 +178,25 @@ export const DashboardPage: React.FC = () => {
   }, [products, orders]);
 
   // Loading states
-  const isLoading = dataLoading || subscriptionLoading;
+  const isLoading = dataLoading || credentialsLoading || !storesLoaded;
   
-  // Show loading state
+  // Show loading state with appropriate message
   if (isLoading) {
-    return <LoadingState message="Loading dashboard data..." />;
+    let loadingMessage = "Loading dashboard data...";
+    
+    if (!storesLoaded) {
+      loadingMessage = "Checking connected stores...";
+    } else if (credentialsLoading) {
+      loadingMessage = "Verifying store credentials...";
+    } else if (dataLoading) {
+      loadingMessage = "Loading inventory data...";
+    }
+    
+    return <LoadingState message={loadingMessage} />;
   }
 
-  // Show setup wizard if no stores
-  if (stores.length === 0) {
+  // Show setup wizard if no stores after loading is complete and we're sure stores data is loaded
+  if (storesLoaded && stores.length === 0) {
     return <StoreSetupWizard />;
   }
 
@@ -184,25 +205,25 @@ export const DashboardPage: React.FC = () => {
     return <ErrorState error={dataError} onRetry={refetch} />;
   }
 
-  // Show subscription required state
-  if (!subscriptionService.isSubscriptionActive(subscription)) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-2 sm:p-3 md:p-4">
-        <h1 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">
-          Subscription Required
-        </h1>
-        <p className="text-gray-400 text-center mb-4 sm:mb-6 px-2 sm:px-0">
-          Please subscribe to access the dashboard and all features.
-        </p>
-        <a
-          href={SUBSCRIPTION_URLS.UPGRADE}
-          className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-        >
-          Upgrade Now
-        </a>
-      </div>
-    );
-  }
+  // // Show subscription required state
+  // if (!subscriptionService.isSubscriptionActive(subscription)) {
+  //   return (
+  //     <div className="flex flex-col items-center justify-center min-h-screen p-2 sm:p-3 md:p-4">
+  //       <h1 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">
+  //         Subscription Required
+  //       </h1>
+  //       <p className="text-gray-400 text-center mb-4 sm:mb-6 px-2 sm:px-0">
+  //         Please subscribe to access the dashboard and all features.
+  //       </p>
+  //       <a
+  //         href={SUBSCRIPTION_URLS.UPGRADE}
+  //         className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+  //       >
+  //         Upgrade Now
+  //       </a>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="min-h-screen bg-[#13111c] text-white p-3 sm:p-4 md:p-6">

@@ -17,68 +17,86 @@ export default function Footer() {
     <footer className="bg-[#1E1E2D] py-16 relative">
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto">
-          {/* Company Info */}
-          <div className="mb-12">
-            <h3 className="text-2xl font-bold text-[#22C55E] hover:text-[#22C55E]/80 transition-colors mb-3">
-              <a href="https://essentur.com" target="_blank" rel="noopener noreferrer">
-                Made by Essentur
-              </a>
-            </h3>
-            <p className="text-gray-400 max-w-md">
-              Your AI Idea, Built by Those Who Launch Their Own.
-            </p>
-          </div>
+          {/*/!* Company Info *!/*/}
+          {/*<div className="mb-12">*/}
+          {/*  <h3 className="text-2xl font-bold text-[#22C55E] hover:text-[#22C55E]/80 transition-colors mb-3">*/}
+          {/*    <a href="https://essentur.com" target="_blank" rel="noopener noreferrer">*/}
+          {/*      Made by Essentur*/}
+          {/*    </a>*/}
+          {/*  </h3>*/}
+          {/*  <p className="text-gray-400 max-w-md">*/}
+          {/*    Your AI Idea, Built by Those Who Launch Their Own.*/}
+          {/*  </p>*/}
+          {/*</div>*/}
 
           {/* Contact and Social */}
           <div className="grid md:grid-cols-2 gap-8">
             {/* Address Section */}
-            <div>
-              <h4 className="text-xl font-semibold text-white mb-4">Address</h4>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3 text-gray-400">
-                  <Mail className="w-5 h-5" />
-                  <a href="mailto:info@essentur.com" className="hover:text-white transition-colors">
-                    info@essentur.com
-                  </a>
-                </div>
-                <div className="flex items-center space-x-3 text-gray-400">
-                  <MapPin className="w-5 h-5" />
-                  <span>Athens, Greece</span>
-                </div>
-              </div>
-            </div>
+            {/*<div>*/}
+            {/*  <h4 className="text-xl font-semibold text-white mb-4">Address</h4>*/}
+            {/*  <div className="space-y-3">*/}
+            {/*    <div className="flex items-center space-x-3 text-gray-400">*/}
+            {/*      <Mail className="w-5 h-5" />*/}
+            {/*      <a href="mailto:info@essentur.com" className="hover:text-white transition-colors">*/}
+            {/*        info@essentur.com*/}
+            {/*      </a>*/}
+            {/*    </div>*/}
+            {/*    <div className="flex items-center space-x-3 text-gray-400">*/}
+            {/*      <MapPin className="w-5 h-5" />*/}
+            {/*      <span>Athens, Greece</span>*/}
+            {/*    </div>*/}
+            {/*  </div>*/}
+            {/*</div>*/}
 
             {/* Social Links */}
             <div>
               <h4 className="text-xl font-semibold text-white mb-4">Follow Us</h4>
               <div className="flex items-center space-x-6">
                 <a 
-                  href="https://linkedin.com/company/essentur" 
+                  href="https://www.linkedin.com/in/marios-vasilakis/"
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors"
                 >
                   <Linkedin className="w-5 h-5" />
-                  <span>LinkedIn</span>
+                  <span>Marios Vasilakis </span>
                 </a>
                 <a 
-                  href="https://x.com/essenturhq" 
+                  href="https://x.com/M__Vasilakis"
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors"
                 >
                   <XIcon />
-                  <span>X (prev Twitter)</span>
+                  <span>M__Vasilakis</span>
                 </a>
-                <a 
-                  href="https://instagram.com/essenturhq" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors"
+                <a
+                    href="https://www.linkedin.com/in/alex-kazos/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors"
                 >
-                  <Instagram className="w-5 h-5" />
-                  <span>Instagram</span>
+                  <Linkedin className="w-5 h-5" />
+                  <span>Alex Kazos </span>
                 </a>
+                <a
+                    href="https://x.com/a_kazos"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors"
+                >
+                  <XIcon />
+                  <span>a_kazos</span>
+                </a>
+                {/*<a */}
+                {/*  href="https://instagram.com/essenturhq" */}
+                {/*  target="_blank" */}
+                {/*  rel="noopener noreferrer"*/}
+                {/*  className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors"*/}
+                {/*>*/}
+                {/*  <Instagram className="w-5 h-5" />*/}
+                {/*  <span>Instagram</span>*/}
+                {/*</a>*/}
               </div>
             </div>
           </div>
