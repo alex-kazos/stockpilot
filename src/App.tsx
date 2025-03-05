@@ -26,6 +26,7 @@ import Dashboard from './components/Dashboard';
 import Footer from './components/Footer';
 import Pricing from './components/Pricing';
 import SocialProof from './components/SocialProof';
+import { Newsletter } from './components/Newsletter';
 
 /**
  * AppRoutes Component
@@ -61,6 +62,7 @@ const AppRoutes: React.FC = () => {
               <HowItWorks />
               {/*<Pricing />*/}
               <Integrations />
+                <Newsletter />
               <Footer />
             </div>
           </main>

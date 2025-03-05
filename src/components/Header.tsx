@@ -62,10 +62,10 @@ export default function Header() {
                   onClick={() => scrollToSection('dashboard')}
                   className="text-gray-400 hover:text-white transition-colors duration-200"
                 >
-                  Sneak Peek
+                  Preview
                 </button>
                 <button
-                  onClick={() => scrollToSection('howitworks')}
+                  onClick={() => scrollToSection('how-it-works')}
                   className="text-gray-400 hover:text-white transition-colors duration-200"
                 >
                   How It Works
@@ -91,11 +91,11 @@ export default function Header() {
                 }}
                 className="text-gray-400 hover:text-white transition-colors duration-200 text-left px-4 py-2 hover:bg-gray-800/50 rounded-lg"
               >
-                Sneak Peek
+                Preview
               </button>
               <button 
                 onClick={() => {
-                  scrollToSection('howitworks');
+                  scrollToSection('how-it-works');
                   setIsMenuOpen(false);
                 }}
                 className="text-gray-400 hover:text-white transition-colors duration-200 text-left px-4 py-2 hover:bg-gray-800/50 rounded-lg"

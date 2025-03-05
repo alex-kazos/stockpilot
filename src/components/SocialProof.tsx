@@ -5,16 +5,16 @@ export default function SocialProof() {
     <section className="py-16 md:py-24 relative">
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto">
-          {/*<h1 className="text-4xl md:text-5xl font-bold text-white text-center mb-6">*/}
-          {/*  End Stock Anxiety*/}
-          {/*</h1>*/}
+          <h1 className="text-4xl md:text-5xl font-bold text-white text-center mb-6">
+            End Stock Anxiety
+          </h1>
           
-          {/*<p className="text-lg md:text-xl text-gray-400 text-center max-w-4xl mx-auto mb-16">*/}
-          {/*  Tired of running out of bestsellers or overstocking what doesn't sell? Stock Pilot's AI */}
-          {/*  tells you exactly what's moving and what's not. Get instant alerts and */}
-          {/*  recommendations to keep your shelves and storage perfectly balanced—no guessing, */}
-          {/*  no stress.*/}
-          {/*</p>*/}
+          <p className="text-lg md:text-xl text-gray-400 text-center max-w-4xl mx-auto mb-16">
+            Tired of running out of bestsellers or overstocking what doesn't sell? Stock Pilot's AI
+            tells you exactly what's moving and what's not. Get instant alerts and
+            recommendations to keep your shelves and storage perfectly balanced—no guessing,
+            no stress.
+          </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
             {[
