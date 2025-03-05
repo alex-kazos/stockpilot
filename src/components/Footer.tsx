@@ -102,11 +102,11 @@ export default function Footer() {
           </div>
 
           {/* Bottom Text */}
-          <div className="mt-12 pt-6 border-t border-gray-800">
-            <p className="text-gray-500 text-center">
-              Developed by Essentur
-            </p>
-          </div>
+          {/*<div className="mt-12 pt-6 border-t border-gray-800">*/}
+          {/*  <p className="text-gray-500 text-center">*/}
+          {/*    Developed by Essentur*/}
+          {/*  </p>*/}
+          {/*</div>*/}
         </div>
       </div>
     </footer>
