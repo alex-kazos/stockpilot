@@ -24,6 +24,7 @@ StockPilot AI is an intelligent inventory management and analytics platform that
 - **Shopify Integration**
   - Full API integration for product and order management
   - Real-time sync with your Shopify store
+  - Multi-store architecture with store selection
 - **Stripe**
   - Subscription management
   - Payment processing
@@ -31,6 +32,7 @@ StockPilot AI is an intelligent inventory management and analytics platform that
   - AI-powered inventory recommendations
   - Smart restocking suggestions
   - Sales trend analysis
+  - Context-aware query system
 
 ## Core Features 🌟
 
@@ -51,6 +53,7 @@ The main dashboard (`DashboardGrid.tsx`) provides a comprehensive view of your s
    - Smart restocking suggestions
    - Sales trend analysis
    - Product performance insights
+   - Context-aware filtering for optimal recommendations
 
 4. **Product Tables**
    - Detailed product listings
@@ -62,17 +65,28 @@ The main dashboard (`DashboardGrid.tsx`) provides a comprehensive view of your s
    - Demand prediction
    - Seasonal trend analysis
 
+### Multi-Store Management
+- Connect and manage multiple Shopify stores under a single account
+- Seamlessly switch between stores using the store selector
+- Store-specific data and analytics
+- Each store maintains its own settings and credentials
+- Backward compatible with legacy single-store setup
+
 ### AI Integration
 - Powered by OpenAI's GPT models
 - Smart inventory recommendations
 - Sales pattern recognition
 - Automated restocking suggestions
+- Context-aware query system for optimized token usage
+- Dynamic filtering of product data based on query context
 
 ### Shopify Integration
 - Seamless store connection
+- Support for multiple stores per account
 - Real-time product sync
 - Order tracking and management
 - Inventory updates
+- Secure API token storage in Firestore
 
 ### Subscription Management
 - Flexible subscription plans (monthly/yearly)
@@ -88,17 +102,32 @@ stockpilotai/
 │   ├── components/
 │   │   ├── analytics/         # Analytics components
 │   │   ├── dashboard/         # Dashboard components
+│   │   │   └── StoreSelector  # Store selection component
 │   │   ├── integrations/      # Integration components
+│   │   │   └── ShopifySetup   # Multi-store Shopify connection
 │   │   └── subscription/      # Subscription components
 │   ├── contexts/              # React contexts
 │   ├── hooks/                 # Custom React hooks
 │   ├── pages/                 # Page components
 │   ├── services/              # API services
 │   ├── types/                 # TypeScript types
-│   └── utils/                 # Utility functions
+│   └── utils/
+│       ├── openai.ts          # OpenAI integration
+│       └── queryAnalyzer.ts   # Context-aware query system
 ├── public/                    # Static assets
 └── services/                  # Backend services
 ```
+
+## Database Structure
+
+### Firestore Collections
+- **users/{userId}** - User data
+  - **stores/{storeId}** - Connected Shopify stores
+    - shopUrl: Store URL
+    - apiToken: Admin API token
+    - isActive: Currently selected store
+    - createdAt: Connection timestamp
+- **shopify_credentials/{userId}** - Legacy store structure
 
 ## Getting Started 🚀
 
@@ -116,8 +145,7 @@ Required environment variables:
 - `VITE_FIREBASE_STORAGE_BUCKET`
 - `VITE_FIREBASE_MESSAGING_SENDER_ID`
 - `VITE_FIREBASE_APP_ID`
-- `VITE_OPENAI_API_KEY`
-- `VITE_STRIPE_PUBLISHABLE_KEY`
+
 
 ## License 📄
 
