@@ -25,9 +25,6 @@ StockPilot AI is an intelligent inventory management and analytics platform that
   - Full API integration for product and order management
   - Real-time sync with your Shopify store
   - Multi-store architecture with store selection
-- **Stripe**
-  - Subscription management
-  - Payment processing
 - **OpenAI**
   - AI-powered inventory recommendations
   - Smart restocking suggestions
@@ -87,12 +84,6 @@ The main dashboard (`DashboardGrid.tsx`) provides a comprehensive view of your s
 - Order tracking and management
 - Inventory updates
 - Secure API token storage in Firestore
-
-### Subscription Management
-- Flexible subscription plans (monthly/yearly)
-- Secure payment processing via Stripe
-- Subscription status monitoring
-- Plan management interface
 
 ## Project Structure 📁
 
