@@ -124,7 +124,6 @@ stockpilotai/
     - apiToken: Admin API token
     - isActive: Currently selected store
     - createdAt: Connection timestamp
-- **shopify_credentials/{userId}** - Legacy store structure
 
 ## Getting Started 🚀
 
