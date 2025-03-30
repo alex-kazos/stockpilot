@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronDown, Plus, Store } from 'lucide-react';
 import { ShopifySetup } from '../integrations/ShopifySetup';
-import { SquareSetup } from '../integrations/SquareSetup';
 
 interface StoreSelectorProps {
   currentStore: {
@@ -24,7 +23,6 @@ export const StoreSelector: React.FC<StoreSelectorProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showShopifySetup, setShowShopifySetup] = useState(false);
-  const [showSquareSetup, setShowSquareSetup] = useState(false);
 
   return (
     <div className="relative">
@@ -48,7 +46,7 @@ export const StoreSelector: React.FC<StoreSelectorProps> = ({
               }}
               className="w-full px-4 py-2 text-left hover:bg-[#2D2B3B] transition-colors flex items-center space-x-2"
             >
-              <Store className={`w-4 h-4 ${store.type === 'shopify' ? 'text-indigo-400' : 'text-purple-400'}`} />
+              <Store className={`w-4 h-4 text-indigo-400`} />
               <span className="text-white">{store.name}</span>
             </button>
           ))}
@@ -68,10 +66,6 @@ export const StoreSelector: React.FC<StoreSelectorProps> = ({
       {showShopifySetup && (
         <ShopifySetup onClose={() => setShowShopifySetup(false)} />
       )}
-
-      {showSquareSetup && (
-        <SquareSetup onClose={() => setShowSquareSetup(false)} />
-      )}
     </div>
   );
-}; 
+};

@@ -28,20 +28,6 @@ export const products: Product[] = [
     trend: 'down',
     margin: 0.45
   },
-  // {
-  //   id: '2',
-  //   name: 'Black T-Shirt',
-  //   sku: 'TS-002',
-  //   category: 'apparel',
-  //   subCategory: 't-shirts',
-  //   stock: 32,
-  //   price: 39.99,
-  //   sales: 45,
-  //   reorderPoint: 25,
-  //   lastMonthSales: 32,
-  //   trend: 'up',
-  //   margin: 0.55
-  // },
   {
     id: '3',
     name: 'White T-Shirt',
@@ -70,20 +56,6 @@ export const products: Product[] = [
     trend: 'stable',
     margin: 0.50
   },
-  // {
-  //   id: '5',
-  //   name: 'White Running Shoes',
-  //   sku: 'RS-002',
-  //   category: 'shoes',
-  //   subCategory: 'running',
-  //   stock: 42,
-  //   price: 99.99,
-  //   sales: 12,
-  //   reorderPoint: 15,
-  //   lastMonthSales: 8,
-  //   trend: 'down',
-  //   margin: 0.45
-  // },
   {
     id: '6',
     name: 'Sports Backpack',
@@ -112,34 +84,6 @@ export const products: Product[] = [
     trend: 'up',
     margin: 0.70
   },
-  // {
-  //   id: '8',
-  //   name: 'Compression Shorts',
-  //   sku: 'CS-001',
-  //   category: 'apparel',
-  //   subCategory: 'shorts',
-  //   stock: 55,
-  //   price: 34.99,
-  //   sales: 15,
-  //   reorderPoint: 20,
-  //   lastMonthSales: 18,
-  //   trend: 'down',
-  //   margin: 0.55
-  // },
-  // {
-  //   id: '9',
-  //   name: 'Yoga Mat',
-  //   sku: 'YM-001',
-  //   category: 'accessories',
-  //   subCategory: 'yoga',
-  //   stock: 25,
-  //   price: 29.99,
-  //   sales: 48,
-  //   reorderPoint: 30,
-  //   lastMonthSales: 35,
-  //   trend: 'up',
-  //   margin: 0.75
-  // },
   {
     id: '10',
     name: 'Red Running Shoes',

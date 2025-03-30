@@ -70,6 +70,9 @@ The main dashboard (`DashboardGrid.tsx`) provides a comprehensive view of your s
 - Backward compatible with legacy single-store setup
 
 ### AI Integration
+
+![openai API.png](public/images/openai%20API.png)
+
 - Powered by OpenAI's GPT models
 - Smart inventory recommendations
 - Sales pattern recognition
@@ -78,6 +81,9 @@ The main dashboard (`DashboardGrid.tsx`) provides a comprehensive view of your s
 - Dynamic filtering of product data based on query context
 
 ### Shopify Integration
+
+![shopify API.png](public/images/shopify%20API.png)
+
 - Seamless store connection
 - Support for multiple stores per account
 - Real-time product sync

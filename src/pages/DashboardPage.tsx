@@ -6,27 +6,23 @@
  * Integrates with Shopify to fetch and display store data.
  */
 
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useShopifyData } from '../hooks/useShopifyData';
-import { useShopifyCredentials } from '../hooks/useShopifyCredentials';
-import { logger } from '../utils/logger';
-import { mergeProductsBySku, transformForRecommendations } from '../utils/productMerger';
-import { ShopifySetup } from '../components/integrations/ShopifySetup';
-import { MetricCards } from '../components/analytics/MetricCards';
-import { DashboardHeader } from '../components/dashboard/DashboardHeader';
-import { DashboardGrid } from '../components/dashboard/DashboardGrid';
-import { LoadingState } from '../components/shared/LoadingState';
-import { ErrorState } from '../components/shared/ErrorState';
-import { subscriptionService } from '../services/subscriptionService';
-import { SUBSCRIPTION_URLS } from '../services/subscriptionService';
-import { AIAssistantButton } from '../components/assistant/AIAssistantButton';
-import { AIAssistantPanel } from '../components/assistant/AIAssistantPanel';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { StoreSetupWizard } from '../components/onboarding/StoreSetupWizard';
+import { logger } from '../utils/logger';
+import { LoadingState } from '../components/shared/LoadingState';
+import { ErrorState } from '../components/shared/ErrorState';
+import { DashboardHeader } from '../components/dashboard/DashboardHeader';
+import { DashboardGrid } from '../components/dashboard/DashboardGrid';
+import { AIAssistantButton } from '../components/assistant/AIAssistantButton';
+import { AIAssistantPanel } from '../components/assistant/AIAssistantPanel';
 import { AIAssistantProvider } from '../contexts/AIAssistantContext';
+import { mergeProductsBySku, transformForRecommendations } from '../utils/productMerger';
 
+// Define store interface for different platform integrations
 interface Store {
   id: string;
   name: string;
@@ -36,15 +32,17 @@ interface Store {
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
-  const { credentials, loading: credentialsLoading } = useShopifyCredentials();
+  
+  // Store state management
   const [stores, setStores] = useState<Store[]>([]);
-  const [storesLoaded, setStoresLoaded] = useState(false);
   const [currentStore, setCurrentStore] = useState<Store | null>(null);
-  const [subscription, setSubscription] = useState(null);
-  const [subscriptionLoading, setSubscriptionLoading] = useState(true);
+  const [storesLoaded, setStoresLoaded] = useState(false);
+  
+  // UI state management
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
 
+  // Shopify credentials and data loading
   const { 
     products, 
     orders, 
@@ -56,25 +54,11 @@ export const DashboardPage: React.FC = () => {
     fetchOrders: currentStore?.type === 'shopify'
   });
 
-  // // Check subscription status
-  // useEffect(() => {
-  //   const checkSubscription = async () => {
-  //     if (user?.email) {
-  //       const sub = await subscriptionService.getUserSubscription(user.email);
-  //       setSubscription(sub);
-  //     }
-  //     setSubscriptionLoading(false);
-  //   };
-  //   checkSubscription();
-  // }, [user]);
-
-  // Fetch all stores for the current user
   useEffect(() => {
     const fetchStores = async () => {
       if (!user) return;
 
       try {
-        // Fetch Shopify stores from users/{userId}/stores collection
         const shopifyStoresRef = collection(db, 'users', user.uid, 'stores');
         const shopifyStoresDocs = await getDocs(shopifyStoresRef);
         const shopifyStores = shopifyStoresDocs.docs.map(doc => {
@@ -87,13 +71,11 @@ export const DashboardPage: React.FC = () => {
           };
         });
 
-        // Fetch Square stores (if we had them in the future)
-        const squareStores: Store[] = []; // placeholder for future implementation
+        const squareStores: Store[] = []; 
 
         const allStores = [...shopifyStores, ...squareStores];
         setStores(allStores);
 
-        // Set the first store as current if none is selected
         if (allStores.length > 0 && !currentStore) {
           setCurrentStore(allStores[0]);
         }
@@ -107,10 +89,8 @@ export const DashboardPage: React.FC = () => {
     fetchStores();
   }, [user]);
 
-  // Set the current store when stores are loaded
   useEffect(() => {
     if (stores.length > 0) {
-      // Find active store or use the first one
       const activeStore = stores.find(store => store.isActive) || stores[0];
       setCurrentStore(activeStore);
       
@@ -122,7 +102,6 @@ export const DashboardPage: React.FC = () => {
     }
   }, [stores]);
 
-  // Transform Shopify products to dashboard format
   const dashboardProducts = useMemo(() => {
     if (!products?.length) return [];
 
@@ -144,13 +123,13 @@ export const DashboardPage: React.FC = () => {
     }));
   }, [products]);
 
-  // Transform and memoize products data for AI recommendations
   const transformedProducts = useMemo(() => {
     logger.debug('DashboardPage', 'Preparing AI recommendations', {
       hasProducts: !!products?.length,
       productsCount: products?.length || 0,
       hasOrders: !!orders?.length,
-      ordersCount: orders?.length || 0
+      ordersCount: orders?.length || 0,
+      fileName: 'DashboardPage.tsx'
     });
 
     if (!products?.length || !orders?.length) return [];
@@ -177,17 +156,13 @@ export const DashboardPage: React.FC = () => {
     }
   }, [products, orders]);
 
-  // Loading states
-  const isLoading = dataLoading || credentialsLoading || !storesLoaded;
+  const isLoading = dataLoading || !storesLoaded;
   
-  // Show loading state with appropriate message
   if (isLoading) {
     let loadingMessage = "Loading dashboard data...";
     
     if (!storesLoaded) {
       loadingMessage = "Checking connected stores...";
-    } else if (credentialsLoading) {
-      loadingMessage = "Verifying store credentials...";
     } else if (dataLoading) {
       loadingMessage = "Loading inventory data...";
     }
@@ -195,35 +170,13 @@ export const DashboardPage: React.FC = () => {
     return <LoadingState message={loadingMessage} />;
   }
 
-  // Show setup wizard if no stores after loading is complete and we're sure stores data is loaded
   if (storesLoaded && stores.length === 0) {
     return <StoreSetupWizard />;
   }
 
-  // Show error state
   if (dataError) {
     return <ErrorState error={dataError} onRetry={refetch} />;
   }
-
-  // // Show subscription required state
-  // if (!subscriptionService.isSubscriptionActive(subscription)) {
-  //   return (
-  //     <div className="flex flex-col items-center justify-center min-h-screen p-2 sm:p-3 md:p-4">
-  //       <h1 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">
-  //         Subscription Required
-  //       </h1>
-  //       <p className="text-gray-400 text-center mb-4 sm:mb-6 px-2 sm:px-0">
-  //         Please subscribe to access the dashboard and all features.
-  //       </p>
-  //       <a
-  //         href={SUBSCRIPTION_URLS.UPGRADE}
-  //         className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-  //       >
-  //         Upgrade Now
-  //       </a>
-  //     </div>
-  //   );
-  // }
 
   return (
     <div className="min-h-screen bg-[#13111c] text-white p-3 sm:p-4 md:p-6">
@@ -248,8 +201,6 @@ export const DashboardPage: React.FC = () => {
           }
         }}
       />
-      
-      <MetricCards products={products || []} orders={orders || []} />
       
       <DashboardGrid 
         products={dashboardProducts} 

@@ -9,18 +9,6 @@ const platforms = [
     name: 'Open AI',
     logo: '/images/platforms/open-ai.png'
   },
-  // {
-  //   name: 'BigCommerce',
-  //   logo: '/images/platforms/bigcommerce.svg'
-  // },
-  // {
-  //   name: 'WooCommerce',
-  //   logo: '/images/platforms/woocommerce.svg'
-  // },
-  // {
-  //   name: 'Square',
-  //   logo: '/images/platforms/square-logo-bold.svg'
-  // }
 ];
 
 export default function Integrations() {
