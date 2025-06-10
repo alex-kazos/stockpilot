@@ -48,7 +48,7 @@ export default function Footer() {
                   <span>Alex Kazos </span>
                 </a>
                 <a
-                    href="https://x.com/a_kazos"
+                    href="https://x.com/alex_kazos"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors"
