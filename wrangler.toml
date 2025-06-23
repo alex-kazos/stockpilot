@@ -1,0 +1,24 @@
+[site]
+bucket = "./dist"
+
+[build]
+command = "npm run build"
+
+[env.production]
+# Production environment variables can be added here
+# For example:
+# VITE_FIREBASE_PROJECT_ID = "your-firebase-project-id"
+
+[env.development]
+# Development environment variables can be added here
+
+[functions]
+# Configuration for your Cloudflare Pages Functions
+directory = "functions"
+
+[triggers]
+crons = []  # Add any schedule triggers if needed
+
+[miniflare]
+# Local development settings
+port = 8788
