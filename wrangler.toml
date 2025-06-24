@@ -1,24 +1,17 @@
-[site]
-bucket = "./dist"
+# Cloudflare Pages configuration
+name = "stockpilot"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = "dist"
 
-[build]
-command = "npm run build"
-
+# Environment variables
 [env.production]
-# Production environment variables can be added here
-# For example:
+# Production environment variables go here
+# Example:
 # VITE_FIREBASE_PROJECT_ID = "your-firebase-project-id"
 
-[env.development]
-# Development environment variables can be added here
+[env.preview]
+# Preview environment variables go here
 
-[functions]
-# Configuration for your Cloudflare Pages Functions
-directory = "functions"
-
+# Triggers for scheduled tasks
 [triggers]
 crons = []  # Add any schedule triggers if needed
-
-[miniflare]
-# Local development settings
-port = 8788
