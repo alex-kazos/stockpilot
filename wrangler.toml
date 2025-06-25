@@ -12,6 +12,5 @@ pages_build_output_dir = "dist"
 [env.preview]
 # Preview environment variables go here
 
-# Triggers for scheduled tasks
-[triggers]
-crons = []  # Add any schedule triggers if needed
+# Note: Triggers/crons are not used in Cloudflare Pages
+# They must be configured separately via the Cloudflare dashboard
