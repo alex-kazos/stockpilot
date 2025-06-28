@@ -1,7 +1,7 @@
 {
   "version": 1,
   "include": ["/*"],
-  "exclude": [],
+  "exclude": ["/assets/*", "/images/*"],
   "routes": [
     {
       "pattern": "/api/shopify/*",
