@@ -1,5 +1,5 @@
 # Cloudflare Pages configuration
-name = "stockpilot"
+name = "stockpilot-ai"
 compatibility_date = "2025-06-26"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "dist"
