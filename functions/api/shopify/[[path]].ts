@@ -2,23 +2,44 @@ import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
 // Initialize Firebase Admin if not already initialized
+let firebaseInitialized = false;
+let db;
+
 if (!getApps().length) {
   try {
-    initializeApp({
-      credential: cert({
-        projectId: process.env.VITE_FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      }),
-    });
-    console.log('Firebase Admin initialized successfully');
+    // Check if all required environment variables are present
+    const projectId = process.env.VITE_FIREBASE_PROJECT_ID;
+    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+    
+    if (!projectId || !clientEmail || !privateKey) {
+      console.error('Missing Firebase environment variables:', { 
+        hasProjectId: !!projectId, 
+        hasClientEmail: !!clientEmail, 
+        hasPrivateKey: !!privateKey 
+      });
+    } else {
+      initializeApp({
+        credential: cert({
+          projectId,
+          clientEmail,
+          privateKey: privateKey.replace(/\\n/g, '\n'),
+        }),
+      });
+      firebaseInitialized = true;
+      console.log('Firebase Admin initialized successfully');
+    }
   } catch (error) {
     console.error('Error initializing Firebase Admin:', error);
-    throw error;
+    // Don't throw the error, just log it
+    // This allows the function to still handle requests even if Firebase init fails
   }
 }
 
-const db = getFirestore();
+// Only get Firestore if Firebase was initialized successfully
+if (firebaseInitialized) {
+  db = getFirestore();
+}
 
 export async function onRequest(context) {
   // Get the request object
