@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
-import { NewsletterCard } from '@/components/ui/NewsletterCard';
-import { newsletters } from '@/data/newsletters';
+import { NewsletterCard } from './ui/NewsletterCard';
+import { newsletters } from '../data/newsletters';
 
 export function Newsletter() {
     return (
