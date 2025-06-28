@@ -54,7 +54,7 @@ export default function Footer() {
                     className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors"
                 >
                   <XIcon />
-                  <span>a_kazos</span>
+                  <span>alex_kazos</span>
                 </a>
               </div>
             </div>
