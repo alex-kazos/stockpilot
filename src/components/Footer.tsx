@@ -27,11 +27,11 @@ export default function Footer() {
                   className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors"
                 >
                   <Linkedin className="w-5 h-5" />
-                  <span>Marios Vasilakis </span>
+                  <span className="whitespace-nowrap">Marios Vasilakis</span>
                 </a>
-                <a 
+                <a
                   href="https://x.com/M__Vasilakis"
-                  target="_blank" 
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors"
                 >
@@ -39,22 +39,22 @@ export default function Footer() {
                   <span>M__Vasilakis</span>
                 </a>
                 <a
-                    href="https://www.linkedin.com/in/alex-kazos/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors"
+                  href="https://www.linkedin.com/in/alex-kazos/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors"
                 >
                   <Linkedin className="w-5 h-5" />
-                  <span>Alex Kazos </span>
+                  <span className="whitespace-nowrap">Alex Kazos</span>
                 </a>
                 <a
-                    href="https://x.com/alex_kazos"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors"
+                  href="https://x.com/alex_kazos"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors"
                 >
                   <XIcon />
-                  <span>a_kazos</span>
+                  <span>alex_kazos</span>
                 </a>
               </div>
             </div>

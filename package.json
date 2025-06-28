@@ -3,6 +3,25 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "browser": {
+    "fs": "./src/stubs/fs.js",
+    "path": "./src/stubs/empty.js",
+    "os": "./src/stubs/empty.js",
+    "crypto": "./src/stubs/empty.js",
+    "stream": "./src/stubs/empty.js",
+    "util": "./src/stubs/empty.js",
+    "events": "./src/stubs/empty.js",
+    "http": "./src/stubs/empty.js",
+    "https": "./src/stubs/empty.js",
+    "net": "./src/stubs/empty.js",
+    "tls": "./src/stubs/empty.js",
+    "zlib": "./src/stubs/empty.js",
+    "child_process": "./src/stubs/empty.js",
+    "buffer": "./src/stubs/empty.js",
+    "url": "./src/stubs/empty.js",
+    "querystring": "./src/stubs/empty.js",
+    "assert": "./src/stubs/empty.js"
+  },
   "scripts": {
     "dev": "vite --host",
     "build": "tsc && vite build",
@@ -40,6 +59,9 @@
     "stripe": "^17.5.0",
     "tailwind-merge": "^3.0.2",
     "uuid": "^11.0.3"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "4.13.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",
